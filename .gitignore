@@ -1,5 +1,4 @@
-// ingore node modules and all the other classics
-node_modules
+node_modules/
 .DS_Store
 .env
 .env.local
