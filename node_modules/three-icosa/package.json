@@ -1,0 +1,49 @@
+{
+  "name": "three-icosa",
+  "version": "0.4.0",
+  "description": "Implements Tilt Brush/Open Brush related glTF extensions in three.js",
+  "scripts": {
+    "dev": "rollup --config --watch",
+    "build": "rollup --config && terser dist/three-icosa.js -o dist/three-icosa.min.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "main": "dist/three-icosa.js",
+  "module": "dist/three-icosa.module.js",
+  "types": "dist/three-icosa.d.ts",
+  "author": "Icosa Gallery",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/icosa-gallery/three-icosa/issues"
+  },
+  "homepage": "https://github.com/icosa-gallery/three-icosa#readme",
+  "devDependencies": {
+    "rollup": "^2.70.1",
+    "rollup-plugin-dts": "^4.2.0",
+    "terser": "^5.12.0",
+    "typescript": "^4.6.2"
+  },
+  "peerDependencies": {
+    "three": ">=0.139.0"
+  },
+  "files": [
+    "dist"
+  ],
+  "funding": {
+    "type": "opencollective",
+    "url": "https://opencollective.com/icosa"
+  },
+  "keywords": [
+    "three",
+    "three.js",
+    "gltf",
+    "extension",
+    "loader",
+    "openbrush",
+    "tiltbrush",
+    "creative",
+    "camera",
+    "vr",
+    "ar",
+    "xr"
+  ]
+}

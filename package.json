@@ -1,0 +1,57 @@
+{
+	"name": "@antpb/xr-publisher",
+	"version": "0.1.0",
+	"type": "module",
+	"main": "dist/xr-publisher.cjs.js",
+	"module": "dist/xr-publisher.esm.js",
+	"types": "dist/index.d.ts",
+	"files": [
+		"dist"
+	],
+	"scripts": {
+		"dev": "vite",
+		"build": "vite build",
+		"preview": "vite preview",
+		"typecheck": "tsc --noEmit",
+		"lint": "eslint src --ext .ts,.tsx",
+		"format": "prettier --write \"src/**/*.{ts,tsx}\""
+	},
+	"peerDependencies": {
+		"react": "^18.2.0",
+		"react-dom": "^18.2.0",
+		"three": "0.159.0"
+	},
+	"dependencies": {
+		"@pixiv/three-vrm": "3.1.4",
+		"@pixiv/types-vrmc-vrm-1.0": "^3.1.4",
+		"@react-three/drei": "9.97.0",
+		"@react-three/fiber": "8.15.16",
+		"@react-three/rapier": "1.4.0",
+		"@react-three/xr": "5.7.1",
+		"array-buffer-to-hex": "^1.0.0",
+		"base64-arraybuffer": "^1.0.2",
+		"camera-controls": "^2.7.0",
+		"convert-hex": "^0.1.0",
+		"ecctrl": "1.0.82",
+		"ossos": "^0.0.3",
+		"react-scrollable-feed": "^1.3.1",
+		"three-icosa": "^0.4.0",
+		"three-omi": "^0.1.5",
+		"tiny-simple-peer": "^10.1.2",
+		"troika-three-text": "^0.49.0"
+	},
+	"devDependencies": {
+		"@types/react": "^18.2.0",
+		"@types/react-dom": "^18.2.0",
+		"@types/three": "0.159.0",
+		"@typescript-eslint/eslint-plugin": "^7.1.0",
+		"@typescript-eslint/parser": "^7.1.0",
+		"@vitejs/plugin-react": "^4.2.0",
+		"eslint": "^8.57.0",
+		"prettier": "^3.2.0",
+		"typescript": "^5.3.0",
+		"vite": "^5.1.0",
+		"vite-plugin-dts": "^3.7.0",
+		"vite-plugin-glsl": "^1.2.1"
+	}
+}

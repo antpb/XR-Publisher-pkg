@@ -1,0 +1,42 @@
+{
+	"compilerOptions": {
+	  "target": "ES2020",
+	  "useDefineForClassFields": true,
+	  "lib": ["ES2020", "DOM", "DOM.Iterable"],
+	  "module": "ESNext",
+	  "skipLibCheck": true,
+	  "moduleResolution": "bundler",
+	  "allowImportingTsExtensions": true,
+	  "resolveJsonModule": true,
+	  "isolatedModules": true,
+	  "noEmit": true,
+	  "jsx": "react",
+	  "jsxFactory": "React.createElement",
+	  "jsxFragmentFactory": "React.Fragment",
+	  "strict": true,
+	  "noUnusedLocals": true,
+	  "noUnusedParameters": true,
+	  "noFallthroughCasesInSwitch": true,
+	  "declaration": true,
+	  "declarationDir": "dist/types",
+	  "baseUrl": ".",
+	  "strictNullChecks": false,
+	  "typeRoots": ["./node_modules/@types", "./src/types", "./src/components", "./src/components/p2pcf"],
+	  "types": ["node", "react", "react-dom", "three"],
+	  "paths": {
+		"@/*": ["src/*"]
+	  }
+	},
+	"include": [
+	  "src/**/*.tsx",
+	  "src/**/*.ts",
+	  "src/**/*.jsx",
+	  "src/**/*.js",
+	  "src/**/**/*.tsx",
+	  "src/**/**/*.ts",
+	  "src/**/**/*.jsx",
+	  "src/**/**/*.js",
+	  "src/types/three-object.ts",
+	  "src/components/core/front/Portal.d.ts" // Ensure this path is included
+, "src/components/core/front/ThreeSky.tsx"	]
+  }
