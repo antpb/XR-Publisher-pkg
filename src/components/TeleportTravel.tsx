@@ -147,9 +147,9 @@ export default function TeleportTravel(props: TeleportTravelProps) {
 	const { controllers, player, isPresenting } = useXR();
 
 	useEffect(() => {
-		const x = Number(spawnPos[0]);
-		const y = Number(spawnPos[1]) + 0.1;
-		const z = Number(spawnPos[2]);
+		const x = spawnPos?.[0] ?? 0;
+		const y = (spawnPos?.[1] ?? 0) + 0.1;
+		const z = spawnPos?.[2] ?? 0;
 
 		if (isPresenting) {
 			const participantObject = scene.getObjectByName("playerOne");

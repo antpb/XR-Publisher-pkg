@@ -2,12 +2,22 @@ import * as THREE from "three";
 // Import these at the top of your EnvironmentFront.tsx file
 import { Object3D, Vector3, Quaternion, Euler } from 'three';
 import type { SpawnPoint, EnvironmentFrontProps } from '../types/types';
+import { Portal } from './core/front/Portal';
+import { ThreeSky } from "./core/front/ThreeSky";
+import { ThreeVideo } from "./core/front/ThreeVideo";
+import { ThreeAudio } from "./core/front/ThreeAudio";
+import { ThreeLight } from "./core/front/ThreeLight";
+import { TextObject } from "./core/front/TextObject";
+import { ModelObject } from "./core/front/ModelObject";
+import { ThreeImage } from "./core/front/ThreeImage";
+import { NPCObject } from "./core/front/NPCObject.js";
+import { debounce } from 'lodash';
 
 
-import React, { Suspense, useRef, useState, useEffect } from "react";
+import React, { Suspense, useRef, useState, useEffect, useMemo, useCallback } from "react";
 import { useLoader, useThree, Canvas } from "@react-three/fiber";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
-import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
+// import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 // import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader";
 import { Physics, RigidBody } from "@react-three/rapier";
 import ScrollableFeed from 'react-scrollable-feed'
@@ -36,11 +46,6 @@ import { Participants } from "./core/front/Participants.js";
 import { useKeyboardControls } from "./Controls.js";
 import { ContextBridgeComponent } from "./ContextBridgeComponent.js";
 // import { Reflector } from 'three/examples/jsm/objects/Reflector';
-
-import {
-	ModelObject,
-	NPCObject,
-  } from '../types/three-components';
 
 import { defaultAvatarVRM } from "@/assets/index.js";
   
@@ -457,11 +462,12 @@ const SavedObject: React.FC<SavedObjectInternalProps> = (props) => {
 		camera.add(listener);
 	});
 
+
 	const gltf = useLoader(GLTFLoader, url, (loader) => {
-		const dracoLoader = new DRACOLoader();
-		dracoLoader.setDecoderPath(threeObjectPluginRoot + "/inc/utils/draco/");
-		dracoLoader.setDecoderConfig({ type: 'js' });
-		loader.setDRACOLoader(dracoLoader);
+		// const dracoLoader = new DRACOLoader();
+		// dracoLoader.setDecoderPath(threeObjectPluginRoot + "/inc/utils/draco/");
+		// dracoLoader.setDecoderConfig({ type: 'js' });
+		// loader.setDRACOLoader(dracoLoader);
 
 		loader.register(
 			(parser) => new GLTFAudioEmitterExtension(parser, listener)
@@ -693,7 +699,7 @@ const SavedObject: React.FC<SavedObjectInternalProps> = (props) => {
 					const finalRotation =
 						rotation.setFromQuaternion(quaternion);
 					return (
-						<PortalObject
+						<Portal
 							key={index}
 							positionX={position.x}
 							positionY={position.y}
@@ -718,15 +724,49 @@ const SavedObject: React.FC<SavedObjectInternalProps> = (props) => {
 }
 
 export default function EnvironmentFront(props: EnvironmentFrontProps) {
+	const [avatarUrl, setAvatarUrl] = useState<string>(props.userData.playerVRM || defaultAvatarVRM);
+	// Memoized handlers for avatar URL updates
+	const handleAvatarChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+		const newUrl = e.target.value;
+		setAvatarUrl(newUrl);
+		
+		// Optional: Validate URL format
+		const isValidUrl = /^(http|https):\/\/[^ "]+$/.test(newUrl) || newUrl === '';
+		if (isValidUrl) {
+		props.userData.playerVRM = newUrl || defaultAvatarVRM;
+		}
+	}, []);
 
+	const handleAvatarDrop = useCallback((e: React.DragEvent<HTMLInputElement>) => {
+		e.preventDefault();
+		const url = e.dataTransfer.getData('text');
+		setAvatarUrl(url);
+		props.userData.playerVRM = url;
+	  }, []);
+	
 	const [loadedAudios, setLoadedAudios] = useState<any[]>([]);
 	const [allAudiosLoaded, setAllAudiosLoaded] = useState(false);
   
 
 	const [showUI] = useState(true);
-	const [displayName, setDisplayName] = useState(props.userData.inWorldName);
-	const [playerAvatar, setPlayerAvatar] = useState(props.userData.playerVRM || window.defaultAvatar);
-
+	const [displayName, setDisplayNameImmediate] = useState(props.userData.inWorldName);
+	const [playerAvatar, setPlayerAvatarImmediate] = useState(props.userData.playerVRM || window.defaultAvatar);
+  
+	  // Debounced setters
+	  const setDisplayName = useMemo(
+		() => debounce((value: string) => {
+		  setDisplayNameImmediate(value);
+		}, 150),
+		[]
+	  );
+	
+	  const setPlayerAvatar = useMemo(
+		() => debounce((value: string) => {
+		  setPlayerAvatarImmediate(value);
+		}, 150),
+		[]
+	  );
+	
 	// const [mobileControls, setMobileControls] = useState(null);
 	// const [mobileRotControls, setMobileRotControls] = useState(null);
 	const movement = useKeyboardControls();
@@ -879,6 +919,7 @@ export default function EnvironmentFront(props: EnvironmentFrontProps) {
 											movement={movement}
 											camCollisions={String(props.camCollisions)}
 											avatarHeightOffset={avatarHeightOffset}
+											threeObjectPluginRoot={props.threeObjectPluginRoot}
 										/>
 										{/* <Perf className="stats" /> */}
 										{/* Debug physics */}
@@ -1184,7 +1225,7 @@ export default function EnvironmentFront(props: EnvironmentFrontProps) {
 																alt={attributes.alt}
 																animations={attributes.animations}
 																collidable={attributes.collidable}
-																threeObjectPluginRoot={threeObjectPluginRoot}
+																threeObjectPluginRoot={''}
 																defaultFont={defaultFont}
 															/>
 														);
@@ -1251,7 +1292,7 @@ export default function EnvironmentFront(props: EnvironmentFrontProps) {
 														};
 
 														return (
-															<PortalObject
+															<Portal
 																key={index}
 																url={attributes.url}
 																destinationUrl={attributes.destinationUrl}
@@ -1362,57 +1403,63 @@ export default function EnvironmentFront(props: EnvironmentFrontProps) {
 						<div className="xr-publisher-entry-pfp" style={{ backgroundImage: `url(${props.userData.profileImage})` }}></div>
 						{/* <span>Display Name</span> */}
 						{(props.networkingBlock.length > 0) ? (
-							<>
-								<input type="text" value={displayName} onChange={(e) => setDisplayName(e.target.value)} />
-								{(props.networkingBlock[0].attributes.customAvatars && props.networkingBlock[0].attributes.customAvatars.value === "1") && (
-									<div>
-										<span>VRM or Sprite URL</span>
-										<input
-											type="text"
-											// when something is dragged on this, clear the value and take the new one
-											onDrop={(e) => {
-												e.preventDefault();
-												setPlayerAvatar(e.dataTransfer.getData('text'));
-											}}
-											value={playerAvatar}
-											onChange={(e) => setPlayerAvatar(e.target.value)}
-										/>
-									</div>
-								)}
-								<button
-									className="xr-publisher-load-world-button-secondary"
-									onClick={() => {
-										goToPrivateRoom();
-										canvasRef.current.scrollIntoView({ behavior: 'smooth' });
-										setLoaded(true);
-									}}
-									style={{
-										padding: "10px"
-									}}
-								>
-									{" "}
-									{"Join Private"}
-								</button>
-							</>
-						) : (
-							<div>
-								<span>VRM or Sprite URL</span>
-								<input type="text" value={playerAvatar} onChange={(e) => setPlayerAvatar(e.target.value)} />
-							</div>
-						)}
+  <>
+    <input 
+      type="text"
+      value={displayName}
+      onChange={(e) => setDisplayName(e.target.value)}
+    />
+    {(props.networkingBlock[0].attributes.customAvatars?.value === "1") && (
+      <div>
+        <span>VRM or Sprite URL</span>
+        <input
+          type="text"
+          value={playerAvatar} // Use value instead of defaultValue for controlled component
+          onChange={(e) => setPlayerAvatar(e.target.value)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setPlayerAvatar(e.dataTransfer.getData('text')); 
+          }}
+          style={{ color: "#000 !important" }}
+        />
+      </div>
+    )}
+    <button
+      className="xr-publisher-load-world-button-secondary"
+      onClick={() => {
+        goToPrivateRoom();
+        canvasRef.current?.scrollIntoView({ behavior: 'smooth' });
+        setLoaded(true);
+      }}
+      style={{ padding: "10px" }}
+    >
+      Join Private
+    </button>
+  </>
+) : (
+  <div>
+    <span>VRM or Sprite URL</span>
+    <input 
+      type="text" 
+      value={playerAvatar}  // Use value instead of defaultValue
+      onChange={(e) => setPlayerAvatar(e.target.value)} 
+    />
+  </div>
+)}
+
 					</div>
 					<button
-						className="xr-publisher-load-world-button"
-						onClick={() => {
-							canvasRef.current.scrollIntoView({ behavior: 'smooth' });
-							setLoaded(true);
-						}}
-						style={{
-							padding: "10px"
-						}}
+					className="xr-publisher-load-world-button"
+					onClick={() => {
+						canvasRef.current?.scrollIntoView({ behavior: 'smooth' });
+						setLoaded(true);
+					}}
+					style={{
+						padding: "10px",
+						color: "white"
+					}}
 					>
-						{" "}
-						{props.networkingBlock.length > 0 ? "Join Public" : "Load World"}
+					{props.networkingBlock.length > 0 ? "Join Public" : "Load World"}
 					</button>
 					{(props.networkingBlock.length > 0) && (
 						<div className="xr-publisher-entry-flow-instruction">

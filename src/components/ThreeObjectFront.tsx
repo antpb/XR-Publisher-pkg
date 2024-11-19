@@ -2,8 +2,8 @@ import React, { Suspense, useState, useEffect } from 'react';
 import { Canvas, useLoader, useFrame, useThree } from '@react-three/fiber';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader";
-import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader';
-import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
+// import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader';
+// import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import { USDZLoader } from 'three/examples/jsm/loaders/USDZLoader';
 import { GLTFGoogleTiltBrushMaterialExtension } from "three-icosa";
 import { useAnimations } from '@react-three/drei';
@@ -189,8 +189,10 @@ async function loadMixamoAnimation(
 
 function SavedObject({ orbitRef, ...props }: SavedObjectProps) {
 	const idleFile = useState(idle);
-	const { clock, gl } = useThree();
+	const { clock } = useThree();
 	const [url, setUrl] = useState(props.url);
+	console.log('props.url', props.url);
+	console.log("idleFile", idleFile);
 
 	useEffect(() => {
 		const timer = setTimeout(() => setUrl(props.url), 2000);
@@ -221,15 +223,15 @@ function SavedObject({ orbitRef, ...props }: SavedObjectProps) {
 				);
 			}
 
-			const ktx2Loader = new KTX2Loader();
-			ktx2Loader.setTranscoderPath(`${threeObjectPluginRoot}/inc/utils/basis/`);
-			ktx2Loader.detectSupport(gl);
-			loader.setKTX2Loader(ktx2Loader);
+			// const ktx2Loader = new KTX2Loader();
+			// ktx2Loader.setTranscoderPath(`${threeObjectPluginRoot}/inc/utils/basis/`);
+			// ktx2Loader.detectSupport(gl);
+			// loader.setKTX2Loader(ktx2Loader);
 
-			const dracoLoader = new DRACOLoader();
-			dracoLoader.setDecoderPath(`${threeObjectPluginRoot}/inc/utils/draco/`);
-			dracoLoader.setDecoderConfig({ type: 'js' });
-			loader.setDRACOLoader(dracoLoader);
+			// const dracoLoader = new DRACOLoader();
+			// dracoLoader.setDecoderPath(`${threeObjectPluginRoot}/inc/utils/draco/`);
+			// dracoLoader.setDecoderConfig({ type: 'js' });
+			// loader.setDRACOLoader(dracoLoader);
 
 			const listener = new AudioListener();
 			loader.register(

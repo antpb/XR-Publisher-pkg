@@ -1,44 +1,126 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>XR Publisher Example</title>
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="../dist/xr-publisher.umd.js"></script>
-    <style>
-        body, html {
-            margin: 0;
-            padding: 0;
-            width: 100%;
-            height: 100%;
-        }
-        #scene-container {
-            width: 100%;
-            height: 100vh;
-        }
-    </style>
-</head>
-<body>
-    <div id="scene-container">
-        <three-environment-block>
-            <three-model-block 
-                position-x="0" 
-                position-y="0" 
-                position-z="0"
-                url="path/to/your/model.glb">
-            </three-model-block>
-        </three-environment-block>
-    </div>
+<!-- saved from url=(0093)https://xr-publisher.sxpdigital.workers.dev/directory/antpb/Scene?aayyyyyyasasdfadsioijkjkjkj -->
+<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+        <title>Scene by antpb</title>
+		<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" crossorigin="anonymous">
 
-    <script>
-        const engine = new XRPublisher({
-            containerSelector: '#scene-container',
-            defaultAvatar: 'path/to/default/avatar.vrm'
-        });
+        <style>
+            body { background-color: #191919; color: white; }
+            .world-container { 
+                background: linear-gradient(to bottom right, #131313, #181818);
+                min-height: 80vh;
+            }
+            #world-view {
+                width: 100%;
+                height: 100%;
+                min-height: 80vh;
+            }
+			.xr-publisher-load-world-button {
+				background-color: #8000ab !important;
+			}
+        </style>
+    
+				
+				<meta name="viewport" content="width=device-width, initial-scale=1.0">
+			  <style type="text/css">.styles_scrollable-div__prSCv {
+  max-height: inherit;
+  height: inherit;
+  overflow-y: auto;
+}
+</style><style></style></head>
+    <body>
+        <div class="min-h-screen bg-[#191919] text-white">
+            
+		  <div class="w-full mx-auto px-4 py-2">
+			  <div class="w-full max-w-6xl mx-auto px-2 py-4 flex items-center">
+				<a href="https://xr-publisher.sxpdigital.workers.dev/" class="mr-4"><img src="./index_files/xrpublisher-logo-300x70.png" alt="Logo" class="h-8"></a>
+				<form action="https://xr-publisher.sxpdigital.workers.dev/directory/search" method="GET" class="relative flex-grow" autocomplete="off">
+				<input type="search" name="q" value="" placeholder="Search worlds..." class="w-full px-4 py-2 rounded-lg bg-gray-800 text-md text-white border border-gray-700 focus:outline-none focus:border-purple-500">
+				<button type="submit" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white">
+					<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
 
-        engine.init();
-    </script>
-</body>
-</html>
+					</svg>
+				</button>
+				</form>
+				</div>
+		  </div>
+		
+            
+            <!-- World Info Bar -->
+            <div class="bg-gradient-to-r from-purple-600 to-blue-500 py-4">
+                <div class="container mx-auto px-4">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center space-x-4">
+                            <a href="https://xr-publisher.sxpdigital.workers.dev/author/antpb" class="text-white hover:text-gray-200">
+                                <img src="./index_files/pfp.webp" alt="antpb" class="w-10 h-10 rounded-full inline-block mr-2">
+                                antpb
+                            </a>
+                            <span class="text-white/80">presents</span>
+                            <h1 class="text-xl font-bold">Scene</h1>
+                        </div>
+                        <div class="flex items-center space-x-4 text-sm">
+                            <span>👥 0 Active</span>
+                            <span>👁️ 0 Visits</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- World Container -->
+            <div class="world-container">
+                <div id="world-view">
+                    <!-- wp:xr-publisher/environment {"threeObjectUrl":null,"scale":1,"positionY":0,"rotationY":0,"deviceTarget":"vr","animations":"","camCollisions":1} -->
+	<three-environment-block class="wp-block-xr-publisher-environment alignfull" devicetarget="vr" threeobjecturl="https://items.sxp.digital/f8886983-a11b-4367-a19c-388662542d84/defaultfloor.glb" scale="1" positiony="0" rotationy="0" animations="" camcollisions="1"></three-environment-block>
+	<!-- /wp:xr-publisher/environment -->
+                </div>
+            </div>
+
+            <!-- World Details -->
+            <div class="container mx-auto px-4 py-8">
+                <div class="bg-[#242424] rounded-lg p-6 shadow-lg">
+                    <h2 class="text-xl font-bold mb-4">About this World</h2>
+                    <p class="text-gray-300 mb-4"></p>
+                    
+                    
+                    
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm text-gray-400">
+                        <div>
+                            <span class="block font-medium">Version</span>
+                            1.0.0
+                        </div>
+                        <div>
+                            <span class="block font-medium">Capacity</span>
+                            100 users
+                        </div>
+                        <div>
+                            <span class="block font-medium">Rating</span>
+                            everyone
+                        </div>
+                        <div>
+                            <span class="block font-medium">Created</span>
+                            11/5/2024
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="bg-black py-8">
+                <div class="container mx-auto px-4 text-center text-gray-400">
+                    <p>© 2024 World Publisher</p>
+                    <div class="mt-2">
+                        <a href="https://xr-publisher.sxpdigital.workers.dev/terms" class="text-purple-400 hover:underline mr-4">Terms</a>
+                        <a href="https://xr-publisher.sxpdigital.workers.dev/privacy" class="text-purple-400 hover:underline mr-4">Privacy</a>
+                        <a href="https://github.com/your-repo" class="text-purple-400 hover:underline" rel="noopener noreferrer" target="_blank">GitHub</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- World Engine Script -->
+    	<script src="../dist/xr-publisher.umd.js" nonce=""></script>
+		
+
+    
+    
+    </body></html>

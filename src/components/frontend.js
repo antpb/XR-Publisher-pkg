@@ -115,6 +115,8 @@ if(document.querySelectorAll('three-light-block').length > 0) {
 	);
 }
 
+// log what we can
+console.log('xrPublisherBlocks', xrPublisherBlocks, 'threeApp', threeApp, 'modelsToAdd', modelsToAdd, 'networkingBlock', networkingBlock, 'npcsToAdd', npcsToAdd, 'textToAdd', textToAdd, 'portalsToAdd', portalsToAdd, 'sky', sky, 'imagesToAdd', imagesToAdd, 'spawnToAdd', spawnToAdd, 'videosToAdd', videosToAdd, 'audiosToAdd', audiosToAdd, 'lightsToAdd', lightsToAdd);
 // All blocks.
 // if threeapp is an array and not empty
 if (threeApp && threeApp.length > 0) {

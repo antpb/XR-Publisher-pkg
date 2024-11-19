@@ -2,7 +2,7 @@
 	import { useFrame, useLoader, useThree } from "@react-three/fiber";
 	import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 	import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader";
-	import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
+	// import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 	import { Color, AudioListener, Quaternion, VectorKeyframeTrack, QuaternionKeyframeTrack, KeyframeTrack, AnimationClip, AnimationMixer, Vector3 } from "three";
 	import {
 		useAnimations,
@@ -13,7 +13,7 @@
 	import { VRMUtils, VRMLoaderPlugin, VRMHumanBoneName, VRM } from "@pixiv/three-vrm";
 	import idle from "../../../defaults/avatars/friendly.fbx";
 	import { getMixamoRig } from "../../../utils/rigMap";
-	import type { NPCProps } from "../../../types/three-components";
+	import type { NPCProps } from "./NPCObject.d";
 
 	/**
 	 * A map from Mixamo rig name to VRM Humanoid bone name
@@ -178,10 +178,10 @@
 		// scene.add(helperRoot);
 
 		const gltf = useLoader(GLTFLoader, url, (loader) => {
-			const dracoLoader = new DRACOLoader();
-			dracoLoader.setDecoderPath( model.threeObjectPluginRoot + "/inc/utils/draco/");
-			dracoLoader.setDecoderConfig({type: 'js'});
-			loader.setDRACOLoader(dracoLoader);
+			// const dracoLoader = new DRACOLoader();
+			// dracoLoader.setDecoderPath( model.threeObjectPluginRoot + "/inc/utils/draco/");
+			// dracoLoader.setDecoderConfig({type: 'js'});
+			// loader.setDRACOLoader(dracoLoader);
 
 			loader.register(
 				(parser) => new GLTFAudioEmitterExtension(parser, listener)
@@ -210,7 +210,7 @@
 		useEffect(() => {
 			// console.log("allmessages", model)
 
-			setActiveMessage(model.messages[model.messages.length - 1]);
+			setActiveMessage([model.messages[model.messages.length - 1]]);
 			// console.log("activemessage", activeMessage)
 		}, [model.messages]);
 

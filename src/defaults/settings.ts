@@ -4,13 +4,13 @@ import defaultAvatarVRM from './avatars/xr_publisher_default_avatar.vrm';
 import hmdIcon from './assets/hmdicon.png';
 
 export const defaultSettings: XRPublisherSettings = {
-  threeObjectPlugin: '/assets/',
+  threeObjectPlugin: 'https://builds.sxp.digital/',
   defaultAvatarAnimation: '',
-  defaultAvatar: defaultAvatarVRM,
+  defaultAvatar: 'https://items.sxp.digital/f8886983-a11b-4367-a19c-388662542d84/xrpublisherdefaultavatar.vrm',
   defaultEnvironment: defaultEnvironment,
   userData: {
     inWorldName: 'Guest',
-    playerVRM: defaultAvatarVRM,
+    playerVRM: 'https://items.sxp.digital/f8886983-a11b-4367-a19c-388662542d84/xrpublisherdefaultavatar.vrm',
     profileImage: '',
     nonce: '',
     currentPostId: '',

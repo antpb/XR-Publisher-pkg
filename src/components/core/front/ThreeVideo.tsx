@@ -16,16 +16,18 @@ PositionalAudio,
 } from "three";
 import { RigidBody } from "@react-three/rapier";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
-import { VRMUtils, VRMLoaderPlugin } from "@pixiv/three-vrm";
-import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
+import { VRMLoaderPlugin } from "@pixiv/three-vrm";
+// import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import { Select } from "@react-three/drei";
 import { ThreeVideoProps } from "./ThreeVideo.d";
 
 export function ThreeVideo(threeVideo: ThreeVideoProps) {
 const play = threeVideo.autoPlay === "1" ? true : false;
-const { scene, camera } = useThree();
-const [clicked, setClickEvent] = useState();
+const { camera } = useThree();
+const [clicked, setClickEvent] = useState<boolean>(false);
+//@ts-ignore
 const [screen, setScreen] = useState(null);
+//@ts-ignore
 const [screenParent, setScreenParent] = useState(null);
 const videoControlsEnabled = threeVideo.videoControlsEnabled;
 const [video] = useState(() =>
@@ -39,10 +41,10 @@ const [video] = useState(() =>
 const [audio, setAudio] = useState(null);
 
 const gltf = (threeVideo.customModel === "1") ? useLoader(GLTFLoader, threeVideo.modelUrl, (loader) => {
-	const dracoLoader = new DRACOLoader();
-	dracoLoader.setDecoderPath( threeVideo.threeObjectPluginRoot + "/inc/utils/draco/");
-	dracoLoader.setDecoderConfig({type: 'js'});
-	loader.setDRACOLoader(dracoLoader);
+	// const dracoLoader = new DRACOLoader();
+	// dracoLoader.setDecoderPath( threeVideo.threeObjectPluginRoot + "/inc/utils/draco/");
+	// dracoLoader.setDecoderConfig({type: 'js'});
+	// loader.setDRACOLoader(dracoLoader);
 
 	loader.register((parser) => {
 	return new VRMLoaderPlugin(parser);
@@ -53,26 +55,13 @@ useEffect(() => {
 	const listener = new AudioListener();
 	camera.add(listener);
 	const positionalAudio = new PositionalAudio(listener);
-	const audioPosition = [
-		Number(threeVideo.positionX),
-		Number(threeVideo.positionY),
-		Number(threeVideo.positionZ)
-	];
-
-	const audioRotation = [
-		Number(threeVideo.rotationX),
-		Number(threeVideo.rotationY),
-		Number(threeVideo.rotationZ)
-	];
 	if (threeVideo.url) {
 	const audioLoader = new AudioLoader();
-	positionalAudio.refDistance = 5;
-	positionalAudio.maxDistance = 10000;
-	positionalAudio.rolloffFactor = 5;
-	positionalAudio.coneInnerAngle = 360;
-	positionalAudio.coneOuterAngle = 0;
-	positionalAudio.coneOuterGain = 0.8;
-	positionalAudio.distanceModel = "inverse";
+	positionalAudio.setRefDistance(5);
+	positionalAudio.setMaxDistance(10000);
+	positionalAudio.setRolloffFactor(5);
+	positionalAudio.setDirectionalCone(360, 0, 0.8);
+	positionalAudio.setDistanceModel("inverse");
 	audioLoader.load(threeVideo.url, (buffer) => {
 		positionalAudio.setBuffer(buffer);
 		positionalAudio.setLoop(true);
@@ -98,17 +87,19 @@ useEffect(() => {
 		});
 		if (foundScreen) {
 		setScreen(foundScreen);
-		setScreenParent(foundScreen.parent);
+		if (foundScreen && 'parent' in foundScreen) {
+			setScreenParent((foundScreen as any).parent);
+		}
 		const videoTexture = new VideoTexture(video);
-		videoTexture.colorSpace = sRGBEncoding;
+		videoTexture.encoding = sRGBEncoding;
 
 		// new mesh standard material with the map texture
 		const material = new MeshStandardMaterial({
 			map: videoTexture,
 			side: DoubleSide
 		});	
-		foundScreen.material = material;
-		foundScreen.add(audio);
+		(foundScreen as Mesh).material = material;
+		(foundScreen as Mesh).add(audio);
 		}
 	}
 	}
@@ -157,7 +148,7 @@ useEffect(() => {
 		onChangePointerUp={(e) => {
 			if(videoControlsEnabled){
 				if (e.length !== 0) {
-					setClickEvent(!clicked);
+					setClickEvent((prevState) => !prevState);
 					if (clicked) {
 						video.play();
 						audio.play();
@@ -197,7 +188,7 @@ useEffect(() => {
 								type="fixed"
 								colliders={"cuboid"}
 								ccd={true}
-								onCollisionExit={(manifold, target, other) => {
+								onCollisionExit={() => {
 									if(videoControlsEnabled){
 										setClickEvent(!clicked);
 										if (clicked) {

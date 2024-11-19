@@ -1,3 +1,4 @@
+import { BaseThreeProps } from '@/types/three-components';
 // Light Component
 export interface ThreeLightProps extends BaseThreeProps {
     type: 'directional' | 'ambient' | 'point' | 'spot';

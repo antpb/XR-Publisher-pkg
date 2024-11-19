@@ -222,16 +222,6 @@ export interface NetworkingBlockAttributes {
 
   
   export type {
-	ThreeImageProps,
-	ThreeAudioConfig,
-	ThreeAudioProps,
-	ThreeLightProps,
-	ModelProps,
-	NPCProps,
-	ThreeVideoProps,
-	PortalProps,
-	ThreeSkyProps,
-	TextObjectProps,
 	ParticipantMovement,
 	ParticipantData,
 	VRMHumanoid,
@@ -243,15 +233,6 @@ export interface NetworkingBlockAttributes {
   } from './three-components.d';
   
   export {
-	ThreeImage,
-	ThreeAudio,
-	ThreeLight,
-	ModelObject,
-	NPCObject,
-	ThreeVideo,
-	PortalObject,
-	ThreeSky,
-	TextObject,
 	isCustomElement,
 	TeleportIndicator,
 	ClickIndicatorObject,

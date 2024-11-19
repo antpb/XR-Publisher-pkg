@@ -29,9 +29,7 @@ export function TextObject(model: TextObjectProps): JSX.Element {
 					scale={[1, 1, 1]}
 					// rotation-y={-Math.PI / 2}
 					maxWidth={10}
-					height={20}
 					color={colorValue}
-					transform
 				>
 					{model.textContent}
 				</Text>

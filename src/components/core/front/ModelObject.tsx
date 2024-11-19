@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useFrame, useLoader, useThree } from "@react-three/fiber";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader";
-import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
+// import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import {
 	AudioListener,
 	Quaternion,
@@ -165,7 +165,7 @@ export function ModelObject(model: ModelProps): JSX.Element {
 	}, []);	
 
 	const [listener] = useState(() => new AudioListener());
-	const { scene, clock } = useThree();
+	const { clock } = useThree();
 	useThree(({ camera }) => {
 		camera.add(listener);
 	});
@@ -174,10 +174,10 @@ export function ModelObject(model: ModelProps): JSX.Element {
 
 	try{
 		gltf = useLoader(GLTFLoader, url, (loader) => {
-			const dracoLoader = new DRACOLoader();
-			dracoLoader.setDecoderPath( model.threeObjectPluginRoot + "/inc/utils/draco/");
-			dracoLoader.setDecoderConfig({type: 'js'});
-			loader.setDRACOLoader(dracoLoader);
+			// const dracoLoader = new DRACOLoader();
+			// dracoLoader.setDecoderPath( model.threeObjectPluginRoot + "/inc/utils/draco/");
+			// dracoLoader.setDecoderConfig({type: 'js'});
+			// loader.setDRACOLoader(dracoLoader);
 	
 			loader.register(
 				(parser) => new GLTFAudioEmitterExtension(parser, listener)

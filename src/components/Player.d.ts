@@ -13,6 +13,7 @@ export interface PlayerProps {
     respawn: boolean;
   }>;
   avatarHeightOffset: MutableRefObject<number>;
+  threeObjectPluginRoot: string;
   defaultPlayerAvatar?: string;
   defaultAvatarVRM?: string;
   camCollisions?: string;

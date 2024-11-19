@@ -12,16 +12,30 @@ export class XRPublisher {
   private options: XRPublisherOptions;
   private scanner: ComponentScanner;
   private initialized: boolean = false;
+  private static instance: XRPublisher | null = null;  // Add this line
 
   constructor(options: Partial<XRPublisherOptions> = {}) {
+    console.log('XRPublisher constructor called with options:', options);
     this.options = {
       ...defaultSettings,
       ...options
     };
+    console.log('Initialized options:', this.options);
     this.scanner = new ComponentScanner();
+}
+
+  // Add static auto-init method
+  private static autoInit(): void {
+    console.log('XRPublisher autoInit called');
+    if (!XRPublisher.instance) {
+      console.log('Creating new XRPublisher instance');
+      XRPublisher.instance = new XRPublisher();
+    }
+    XRPublisher.instance.init();
   }
 
   public init(): void {
+	console.log('XRPublisher init called');
     if (this.initialized) {
       console.warn('XR Publisher already initialized');
       return;
@@ -29,6 +43,10 @@ export class XRPublisher {
 
     const environments = document.querySelectorAll('three-environment-block');
     const objects = document.querySelectorAll('three-object-block');
+	// log things so we can test this
+	console.log('environments', environments);
+	console.log('objects', objects);
+	console.log('this.options', this.options);
 
     if (environments.length > 0) {
       this.initializeEnvironments(Array.from(environments as NodeListOf<HTMLElement>));
@@ -49,7 +67,7 @@ export class XRPublisher {
 	const environmentProps: EnvironmentFrontProps = {
 	  threeUrl: env.getAttribute('threeObjectUrl') || '',
 	  deviceTarget: env.getAttribute('deviceTarget') || '2D',
-	  backgroundColor: env.getAttribute('bg_color') || '#ffffff',
+	  backgroundColor: env.getAttribute('bg_color') || '#ffffff00',
 	  zoom: parseInt(env.getAttribute('zoom') || '90'),
 	  scale: parseFloat(env.getAttribute('scale') || '1'),
 	  hasZoom: env.getAttribute('hasZoom') === '1' ? '1' : '0',
@@ -80,7 +98,7 @@ export class XRPublisher {
 	  lightsToAdd: components.lightsToAdd || [],
 	  textToAdd: components.textToAdd || [],
 	  npcsToAdd: components.npcsToAdd || [],
-	  threeObjectPluginRoot: this.options.threeObjectPlugin,
+	  threeObjectPluginRoot: this.options.threeObjectPlugin || '',
 	  defaultAvatarAnimation: this.options.defaultAvatarAnimation,
     userData: {
         ...this.options.userData,
@@ -138,7 +156,7 @@ export class XRPublisher {
       const objectProps: ObjectProps = {
         threeUrl: obj.getAttribute('three-object-url') || '',
 		deviceTarget: '2d', // Must be one of these literal types
-        backgroundColor: obj.getAttribute('bg-color') || '#ffffff',
+        backgroundColor: obj.getAttribute('bg-color') || '#ffffff00',
         zoom: parseInt(obj.getAttribute('zoom') || '90'),
         scale: parseFloat(obj.getAttribute('scale') || '1'),
 		hasZoom: obj.getAttribute('has-zoom') === '1' ? '1' : '0', // Must be one of these literal types
@@ -163,5 +181,18 @@ export class XRPublisher {
   }
 }
 
-export type { XRPublisherOptions };
-export { EnvironmentFront, ThreeObjectFront, Networking };
+// Add this block before the exports
+if (typeof window !== 'undefined') {
+	window.addEventListener('load', () => {
+	  console.log('Window loaded, auto-initializing XRPublisher');
+	  // @ts-ignore
+	  XRPublisher.autoInit();
+	});
+	
+	// Expose to window for external access
+	(window as any).XRPublisher = XRPublisher;
+  }
+  
+  export type { XRPublisherOptions };
+  export { EnvironmentFront, ThreeObjectFront, Networking };
+  

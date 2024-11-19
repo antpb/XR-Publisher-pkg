@@ -68,7 +68,7 @@ export class ComponentScanner {
 			return {
 				threeUrl: env.getAttribute('threeObjectUrl') || '',
 				deviceTarget: env.getAttribute('deviceTarget') || '2D',
-				backgroundColor: env.getAttribute('bg_color') || '#ffffff',
+				backgroundColor: env.getAttribute('bg_color') || '#ffffff1a',
 				zoom: parseInt(env.getAttribute('zoom') || '90'),
 				scale: parseFloat(env.getAttribute('scale') || '1'),
 				hasZoom: env.getAttribute('hasZoom') === 'true',

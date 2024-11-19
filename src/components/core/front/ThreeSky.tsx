@@ -1,6 +1,6 @@
 import React from "react";
 import { useLoader } from "@react-three/fiber";
-import { TextureLoader, DoubleSide } from "three";
+import { TextureLoader, DoubleSide, Texture } from "three";
 import {
 	Sky
 } from "@react-three/drei";
@@ -59,7 +59,7 @@ export function ThreeSky(sky : ThreeSkyProps) {
 		/>
 		);
 	} else {
-		const texture1 = useLoader(TextureLoader, skyUrl);
+		const texture1 = useLoader(TextureLoader, skyUrl) as Texture | Texture[];
 		return (
 			<>
 				<mesh
@@ -70,7 +70,7 @@ export function ThreeSky(sky : ThreeSkyProps) {
 					rotation={[0, 0, 0]}
 				>
 					<sphereGeometry args={[300, 60, 60]} />
-					<meshBasicMaterial side={DoubleSide} map={texture1} />
+					<meshBasicMaterial side={DoubleSide} map={Array.isArray(texture1) ? texture1[0] : texture1} />
 				</mesh>
 			</>
 		);

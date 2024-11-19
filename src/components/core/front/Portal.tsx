@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { useLoader, useThree } from "@react-three/fiber";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
-import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
+// import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import { AudioListener } from "three";
 import { RigidBody, interactionGroups } from "@react-three/rapier";
 import {
@@ -174,10 +174,10 @@ export function Portal(model: PortalProps): JSX.Element {
 	});
 
 	const gltf = useLoader(GLTFLoader, url, (loader) => {
-		const dracoLoader = new DRACOLoader();
-		dracoLoader.setDecoderPath( model.threeObjectPluginRoot + "/inc/utils/draco/");
-		dracoLoader.setDecoderConfig({type: 'js'});
-		loader.setDRACOLoader(dracoLoader);
+		// const dracoLoader = new DRACOLoader();
+		// dracoLoader.setDecoderPath( model.threeObjectPluginRoot + "/inc/utils/draco/");
+		// dracoLoader.setDecoderConfig({type: 'js'});
+		// loader.setDRACOLoader(dracoLoader);
 
 		loader.register(
 			(parser) => new GLTFAudioEmitterExtension(parser, listener)
@@ -255,5 +255,3 @@ export function Portal(model: PortalProps): JSX.Element {
 		</>
 	);
 }
-
-export { PortalProps };

@@ -163,6 +163,7 @@ function addHandRotationControls() {
   }
   
 function loadMixamoAnimation(url, vrm) {
+	console.log( url, vrm );
 let loader;
 if (url.endsWith('.fbx')) {
 	loader = new FBXLoader();
@@ -397,11 +398,18 @@ useEffect(() => {
 	addResetButton(props);
 }, []);
 
-const idleFile = idle;
-const walkingFile = walk;
-const runningFile = run;
-const jumpFile = jump;
-const fallingFile = fall;
+// Default base path if threeObjectPluginRoot is not provided
+let assetBasePath = props.threeObjectPluginRoot || '/assets';
+
+// if the base path starts with file:// use localhost
+
+
+
+const idleFile = `${assetBasePath}avatars/friendly.fbx`;
+const walkingFile = `${assetBasePath}avatars/walking.fbx`;
+const runningFile = `${assetBasePath}avatars/Running.fbx`; 
+const jumpFile = `${assetBasePath}avatars/Jump.fbx`;
+const fallingFile = `${assetBasePath}avatars/falling.fbx`;
 const spawnPoint = props.spawnPoint ? props.spawnPoint.map(Number) : [0, 0, 0];
 const { scene, clock } = useThree();
 const { world, rapier } = useRapier();
@@ -433,10 +441,10 @@ useEffect(() => {
 useEffect(() => {
 	if (!currentPlayerAvatarRef.current) {
 	const loader = new GLTFLoader();
-	const ktx2Loader = new KTX2Loader();
-	ktx2Loader.setTranscoderPath(threeObjectPluginRoot + "/inc/utils/basis/");
-	ktx2Loader.detectSupport(gl);
-	loader.setKTX2Loader(ktx2Loader);
+	// const ktx2Loader = new KTX2Loader();
+	// ktx2Loader.setTranscoderPath(props.threeObjectPluginRoot + "/inc/utils/basis/");
+	// ktx2Loader.detectSupport(gl);
+	// loader.setKTX2Loader(ktx2Loader);
 	// const helperRoot = new Group();
 	// helperRoot.renderOrder = 10000;
 	// scene.add(helperRoot);
@@ -1108,7 +1116,11 @@ const debugArrows = {
 		>
 		<Ecctrl
 			ref={characterRef}
-			position={[Number(props.spawnPoint[0]), Number(props.spawnPoint[1]), Number(props.spawnPoint[2])]}
+			position={[
+				Number(props.spawnPoint?.[0] || 0), 
+				Number(props.spawnPoint?.[1] || 0), 
+				Number(props.spawnPoint?.[2] || 0)
+			]}
 			turnSpeed={20}
 			maxVelLimit={5}
 			jumpVel={7}
@@ -1156,7 +1168,7 @@ const debugArrows = {
 					loop={true}
 					alphaTest={0.1}
 					textureImageURL={userData.playerVRM}
-					textureDataURL={(threeObjectPluginRoot + '/inc/utils/sprite.json')}
+					textureDataURL={(props.threeObjectPluginRoot + '/inc/utils/sprite.json')}
 				/>
 				)}
 			</>
