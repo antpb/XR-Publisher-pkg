@@ -12,7 +12,7 @@ import { ModelObject } from "./core/front/ModelObject";
 import { ThreeImage } from "./core/front/ThreeImage";
 import { NPCObject } from "./core/front/NPCObject.js";
 import { debounce } from 'lodash';
-
+import { Loader2 } from 'lucide-react';
 
 import React, { Suspense, useRef, useState, useEffect, useMemo, useCallback } from "react";
 import { useLoader, useThree, Canvas } from "@react-three/fiber";
@@ -170,93 +170,53 @@ function goToPrivateRoom() {
 		.assign(newUrl + "#" + randomString);
 }
 
-function Loading({ previewImage }: { previewImage: string }) {
-	// const backgroundImageUrl = previewImage !== "" ? previewImage : (threeObjectPlugin + zoomBackground);
-	const backgroundImageUrl = previewImage !== "" ? previewImage : defaultLoadingZoomGraphic;
-	const screenwidth = window.innerWidth;
+const Loading = ({ previewImage }: { previewImage: string }) => {
 	return (
-		<div className="xr-publisher-entry-scene-parent" style={{ background: "radial-gradient(circle, transparent, transparent 0%, white 2%)", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", height: "100vh", width: "400px" }}>
-			<div className="xr-publisher-entry-scene">
-				<div className="xr-publisher-entry-wrap">
-					<div
-						style={{
-							backgroundImage: "url(" + backgroundImageUrl + ")",
-							backgroundSize: "cover",
-						}}
-						className="xr-publisher-entry-wall-right"
-					/>
-					<div
-						style={{
-							backgroundImage: "url(" + backgroundImageUrl + ")",
-						}}
-						className="xr-publisher-entry-wall-left"
-					/>
-					<div
-						style={{
-							backgroundImage: "url(" + backgroundImageUrl + ")",
-							backgroundSize: "cover",
-						}}
-						className="xr-publisher-entry-wall-top"
-					/>
-					<div
-						style={{
-							backgroundImage: "url(" + backgroundImageUrl + ")",
-							backgroundSize: "cover",
-						}}
-						className="xr-publisher-entry-wall-bottom"
-					/>
+	  <div className="relative flex flex-col items-center justify-center min-h-screen bg-gradient-to-r from-slate-900 to-slate-800">
+		{/* Preview Image Background with Overlay */}
+		{previewImage && (
+		  <div 
+			className="absolute inset-0 opacity-20"
+			style={{
+			  backgroundImage: `url(${previewImage})`,
+			  backgroundSize: 'cover',
+			  backgroundPosition: 'center',
+			  filter: 'blur(8px)'
+			}}
+		  />
+		)}
+		
+		{/* Content Container */}
+		<div className="relative z-10 flex flex-col items-center space-y-6">
+		  {/* Loading Animation */}
+		  <div className="flex items-center justify-center">
+			<Loader2 className="w-12 h-12 text-white animate-spin" />
+		  </div>
+		  
+		  {/* Loading Text */}
+		  <div className="text-white/90 text-lg font-medium">
+			Loading Experience...
+		  </div>
+		  
+		  {/* Controls Info Card */}
+		  <div className="mt-8 px-6 py-4 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 text-white/90 text-sm">
+			<div className="flex items-center justify-center space-x-4">
+			  {['W', 'A', 'S', 'D'].map((key) => (
+				<div key={key} className="flex flex-col items-center">
+				  <div className="w-8 h-8 flex items-center justify-center border border-white/40 rounded bg-white/5">
+					{key}
+				  </div>
 				</div>
-				<div className="xr-publisher-entry-wrap">
-					<div
-						style={{
-							backgroundImage: "url(" + backgroundImageUrl + ")",
-							backgroundSize: "cover",
-						}}
-						className="xr-publisher-entry-wall-right"
-					/>
-					<div
-						style={{
-							backgroundImage: "url(" + backgroundImageUrl + ")",
-							backgroundSize: "cover",
-						}}
-						className="xr-publisher-entry-wall-left"
-					/>
-					<div
-						style={{
-							backgroundImage: "url(" + backgroundImageUrl + ")",
-							backgroundSize: "cover",
-						}}
-						className="xr-publisher-entry-wall-top"
-					/>
-					<div
-						style={{
-							backgroundImage: "url(" + backgroundImageUrl + ")",
-							backgroundSize: "cover",
-						}}
-						className="xr-publisher-entry-wall-bottom"
-					/>
-				</div>
+			  ))}
 			</div>
-			{/* <div className="xr-publisher-spinner"></div> */}
-			<div style={{
-				zIndex: "1000",
-				backgroundColor: "black",
-				minWidth: "100px",
-				maxHeight: "60px",
-				padding: "20px",
-				color: "white",
-				textAlign: "center",
-				position: "absolute",
-				textShadow: "0 0 10px rgba(0,0,0,0.5)",
-				bottom: (screenwidth < 600 ? "130px" : "130px"),
-				fontSize: "0.9em",
-				width: "350px"
-			}}>
-				Use [ <b>W</b> ], [ <b>A</b> ], [ <b>S</b> ], and [ <b>D</b> ] to move.
+			<div className="mt-2 text-center text-white/70 text-xs">
+			  Use to move
 			</div>
+		  </div>
 		</div>
+	  </div>
 	);
-}
+  };  
 
 interface ChatBoxProps {
 	defaultMessage?: string;

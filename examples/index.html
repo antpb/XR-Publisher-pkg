@@ -29,49 +29,41 @@
 }
 </style><style></style></head>
     <body>
-        <div class="min-h-screen bg-[#191919] text-white">
-            
-		  <div class="w-full mx-auto px-4 py-2">
-			  <div class="w-full max-w-6xl mx-auto px-2 py-4 flex items-center">
-				<a href="https://xr-publisher.sxpdigital.workers.dev/" class="mr-4"><img src="./index_files/xrpublisher-logo-300x70.png" alt="Logo" class="h-8"></a>
-				<form action="https://xr-publisher.sxpdigital.workers.dev/directory/search" method="GET" class="relative flex-grow" autocomplete="off">
-				<input type="search" name="q" value="" placeholder="Search worlds..." class="w-full px-4 py-2 rounded-lg bg-gray-800 text-md text-white border border-gray-700 focus:outline-none focus:border-purple-500">
-				<button type="submit" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white">
-					<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div class="absolute top-0 left-0 w-full z-10" style="pointer-events: none;">
+			<div class="min-h-screen bg-[#191919] text-white">
+				<div class="w-full mx-auto px-4 py-2 flex items-center justify-between">
+						<a href="https://xr-publisher.sxpdigital.workers.dev/" class="mr-4"><img src="./index_files/xrpublisher-logo-300x70.png" alt="Logo" class="h-8 inline-block" style="pointer-events: auto;"></a>
+							<div class="flex items-center space-x-4">
+								<a href="https://xr-publisher.sxpdigital.workers.dev/author/antpb" class="text-white hover:text-gray-200">
+									<img src="./index_files/pfp.webp" alt="antpb" class="w-10 h-10 rounded-full inline-block mr-2">
+									antpb
+								</a>
+								<span class="text-white/80">presents</span>
+								<h1 class="text-xl font-bold">Scene</h1>
+								<form action="https://xr-publisher.sxpdigital.workers.dev/directory/search" method="GET" class="relative flex-grow" autocomplete="off" style="pointer-events: auto;">
+									<input type="search" name="q" value="" placeholder="Search worlds..." class="w-full px-4 py-2 rounded-lg bg-gray-800 text-md text-white border border-gray-700 focus:outline-none focus:border-purple-500">
+									<button type="submit" class="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-white"></button>
+										<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"></svg>
+									</button>
+								</form>
+								<div class="flex items-center space-x-4 text-sm">
+									<span>👥 0 Active</span>
+									<span>👁️ 0 Visits</span>
+								</div>	
+							</div>
+					</div>
 
-					</svg>
-				</button>
-				</form>
+			</div>
+
 				</div>
-		  </div>
-		
-            
-            <!-- World Info Bar -->
-            <div class="bg-gradient-to-r from-purple-600 to-blue-500 py-4">
-                <div class="container mx-auto px-4">
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-4">
-                            <a href="https://xr-publisher.sxpdigital.workers.dev/author/antpb" class="text-white hover:text-gray-200">
-                                <img src="./index_files/pfp.webp" alt="antpb" class="w-10 h-10 rounded-full inline-block mr-2">
-                                antpb
-                            </a>
-                            <span class="text-white/80">presents</span>
-                            <h1 class="text-xl font-bold">Scene</h1>
-                        </div>
-                        <div class="flex items-center space-x-4 text-sm">
-                            <span>👥 0 Active</span>
-                            <span>👁️ 0 Visits</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+		</div>
 
             <!-- World Container -->
             <div class="world-container">
                 <div id="world-view">
-                    <!-- wp:xr-publisher/environment {"threeObjectUrl":null,"scale":1,"positionY":0,"rotationY":0,"deviceTarget":"vr","animations":"","camCollisions":1} -->
-	<three-environment-block class="wp-block-xr-publisher-environment alignfull" devicetarget="vr" threeobjecturl="https://items.sxp.digital/f8886983-a11b-4367-a19c-388662542d84/defaultfloor.glb" scale="1" positiony="0" rotationy="0" animations="" camcollisions="1"></three-environment-block>
-	<!-- /wp:xr-publisher/environment -->
+					<three-environment-block class="wp-block-xr-publisher-environment alignfull" devicetarget="vr" threeobjecturl="https://items.sxp.digital/f8886983-a11b-4367-a19c-388662542d84/defaultfloor.glb" scale="1" positiony="0" rotationy="0" animations="" camcollisions="1">
+
+					</three-environment-block>
                 </div>
             </div>
 
