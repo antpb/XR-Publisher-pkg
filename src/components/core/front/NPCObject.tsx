@@ -11,7 +11,7 @@
 	import { GLTFAudioEmitterExtension } from "three-omi";
 	// import { GLTFGoogleTiltBrushMaterialExtension } from "three-icosa";
 	import { VRMUtils, VRMLoaderPlugin, VRMHumanBoneName, VRM } from "@pixiv/three-vrm";
-	import idle from "../../../defaults/avatars/friendly.fbx";
+	// import idle from "../../../defaults/avatars/friendly.fbx";
 	import { getMixamoRig } from "../../../utils/rigMap";
 	import type { NPCProps } from "./NPCObject.d";
 
@@ -31,10 +31,20 @@
 	 */
 	function loadMixamoAnimation(url: string, vrm: VRM) {
 		let loader;
-		if (url.endsWith('.fbx')) {
-		loader = new FBXLoader();
+		if (Array.isArray(url)) {
+			url.forEach(item => {
+				if (typeof item === 'string' && item.endsWith('.fbx')) {
+					loader = new FBXLoader();
+				} else {
+					loader = new GLTFLoader();
+				}
+			});
 		} else {
-		loader = new GLTFLoader();
+			if (url.endsWith('.fbx')) {
+				loader = new FBXLoader();
+			} else {
+				loader = new GLTFLoader();
+			}
 		}
 		return loader.loadAsync(url).then((asset) => {
 			const clip = asset.animations[0];
@@ -137,8 +147,7 @@
 	 * @return {JSX.Element} The model object.
 	 */
 	export function NPCObject(model: NPCProps): JSX.Element {
-		const idleFile = useState(idle);
-		const [activeMessage, setActiveMessage] = useState([]);
+		const [idleFile] = useState('https://builds.sxp.digital/avatars/friendly.fbx');		const [activeMessage, setActiveMessage] = useState([]);
 		const headPositionY = useRef<number>(0);
 		const [url, set] = useState(model.url);
 		useEffect(() => {
@@ -327,7 +336,7 @@
 			// retarget the animations from mixamo to the current vrm 
 			// if model.defaultAvatarAnimation is not empty
 			//@ts-ignore
-			if (model.defaultAvatarAnimation[0]){
+			if (Array.isArray(model.defaultAvatarAnimation) && model.defaultAvatarAnimation.length > 0) {
 				// hide the model while we load the animation
 				currentVrm.scene.visible = false;
 				//@ts-ignore
@@ -369,8 +378,7 @@
 					rotation={[model.rotationX, model.rotationY, model.rotationZ]}
 				>
 					<Text
-						font={model.defaultFont}
-						position={[0.6, (Number(headPositionY.current) - 0.5), 0]}
+						position={[0.6, 0.5, 0]}
 						fontSize={0.1}
 						scale={[0.5, 0.5, 0.5]}
 						// rotation-y={-Math.PI / 2}
@@ -384,7 +392,7 @@
 					>
 						{outputJSON && String(outputJSON)}
 					</Text>
-					<mesh name="npcBackground" position={[0.6,  (Number(headPositionY.current) - 0.5), -0.01]}>
+					<mesh name="npcBackground" position={[0.6,  0.5, -0.01]}>
 						<planeGeometry attach="geometry" args={[0.65, 1.5]} />
 						<meshBasicMaterial attach="material" color={blackValue} opacity={0.5}	transparent={ true } />
 					</mesh>
