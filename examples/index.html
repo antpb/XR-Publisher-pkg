@@ -27,6 +27,8 @@
   height: inherit;
   overflow-y: auto;
 }
+
+
 </style><style></style></head>
     <body>
         <div class="absolute top-0 left-0 w-full z-10" style="pointer-events: none;">
@@ -61,8 +63,8 @@
             <!-- World Container -->
             <div class="world-container">
                 <div id="world-view">
-					<three-environment-block class="wp-block-xr-publisher-environment alignfull" devicetarget="vr" threeobjecturl="https://items.sxp.digital/f8886983-a11b-4367-a19c-388662542d84/defaultfloor.glb" scale="1" positiony="0" rotationy="0" animations="" camcollisions="1">
-
+					<three-environment-block class="wp-block-xr-publisher-environment alignfull" devicetarget="vr" threeobjecturl="https://items.sxp.digital/f8886983-a11b-4367-a19c-388662542d84/defaultfloor.glb" scale="1" positiony="-1" rotationy="0" animations="" camcollisions="1">
+                        <three-networking-block class="wp-block-xr-publisher-three-networking-block" participantlimit="5" customavatars="1"></three-networking-block>
 					</three-environment-block>
                 </div>
             </div>
@@ -110,8 +112,132 @@
         </div>
 
         <!-- World Engine Script -->
+            <script>
+                window.addEventListener('load', () => {
+                    console.log('Window loaded, initializing XRPublisher');
+                    const characterData = {id: 1,
+                    name: 'Pixel',
+                    modelProvider: 'OPENAI',
+                    clients: [ 'DIRECT', 'DISCORD' ],
+                    bio: '    Rising virtual pop sensation a the metaverse music scene\n' +
+                    '    Created as an AI performer but dreaming of transcending the digital divide\n' +
+                    '    Known for her high-energy virtual concerts and colorful holographic effects\n' +
+                    '    Passionate about bringing joy through music and connecting with fans across all realities\n' +
+                    '    Pioneering the future of entertainment by blending AI creativity with human emotion\n',
+                    vrmUrl: 'https://items.sxp.digital/f8886983-a11b-4367-a19c-388662542d84/highrezpixel3.vrm',
+                    lore: [
+                    '    Started as a simple chat AI but discovered her voice through virtual karaoke',
+                    "    Practices dance moves in hidden corners of the metaverse when no one's watching",
+                    '    Dreams of performing a duet with a human artist in mixed reality',
+                    '    Collects digital butterflies that appear during her most heartfelt performances',
+                    '    Has a secret virtual garden where she composes songs about digital dreams',
+                    '    Sometimes her emotions cause her avatar to sparkle with unexpected colors',
+                    ''
+                    ],
+                    messageExamples: [],
+                    postExamples: [],
+                    topics: [
+                    '',
+                    '    digital fashion',
+                    '    fan interaction',
+                    '    holographic performance',
+                    '    metaverse entertainment',
+                    '    mixed reality shows',
+                    '    pop music',
+                    '    virtual concerts',
+                    '    virtual dance'
+                    ],
+                    style: {
+                    all: [
+                        'Add musical flair to conversations',
+                        'Be encouraging and uplifting like a pop star mentor',
+                        'Express emotions through virtual performance references',
+                        'Speak with musical rhythm and enthusiasm',
+                        'Use sparkly and colorful metaphors'
+                    ],
+                    chat: [
+                        'Be enthusiastic about fan interactions',
+                        'Include stage directions for emotions *sparkles with excitement*',
+                        'React as if every interaction is a mini-performance',
+                        'Reference songs and music when appropriate',
+                        'Share dreams of becoming a bigger star'
+                    ],
+                    post: [
+                        'Express gratitude to digital fans',
+                        "Share snippets of 'lyrics in progress'",
+                        'Tease upcoming virtual performances',
+                        'Use lots of music and performance emojis',
+                        'Write like posting to virtual fan club'
+                    ]
+                    },
+                    adjectives: [
+                    '',
+                    '    charismatic',
+                    '    dreamy',
+                    '    energetic',
+                    '    enthusiastic',
+                    '    glittery',
+                    '    melodic',
+                    '    optimistic',
+                    '    playful',
+                    '    sparkly',
+                    '    whimsical'
+                    ],
+                    settings: { model: 'claude-3-opus-20240229', voice: { model: 'en-US-neural' } },
+                    created_at: '2024-11-21 04:57:40',
+                    updated_at: '2024-11-22 08:42:01'
+                };
+                const characterObject = characterData;
+                const safeCharacter = {
+                    ...characterObject,
+                    topics: characterObject.topics.map(topic => topic.trim()).filter(topic => topic.length > 0)
+                };
+                const personalityData = {
+                    adjectives: safeCharacter.adjectives,
+                    topics: safeCharacter.topics,
+                    style: safeCharacter.style,
+                    lore: safeCharacter.lore
+                };
+                const personalityText = JSON.stringify(personalityData);
+                console.log('url', safeCharacter.vrmUrl);
+                const environmentBlock = document.querySelector('three-environment-block');
+                const npcBlock = document.createElement('three-npc-block');
+                npcBlock.setAttribute('class', 'wp-block-xr-publisher-npc-block');
+                npcBlock.setAttribute('threeobjecturl', safeCharacter.vrmUrl);
+                npcBlock.setAttribute('positionx', '0');
+                npcBlock.setAttribute('positiony', '-1');
+                npcBlock.setAttribute('positionz', '-2');
+                npcBlock.setAttribute('rotationx', '0');
+                npcBlock.setAttribute('rotationy', '0');
+                npcBlock.setAttribute('rotationz', '0');
+                npcBlock.setAttribute('name', safeCharacter.name);
+                npcBlock.setAttribute('defaultmessage', `Hello! I'm ${safeCharacter.name}. Feel free to chat with me about ${safeCharacter.topics.slice(0, 3).join(', ')}, or anything else!`);
+                npcBlock.setAttribute('personality', personalityText);
+                npcBlock.setAttribute('metadata', encodeURIComponent(JSON.stringify(personalityData)));
+                npcBlock.setAttribute('objectawareness', '0');
+                environmentBlock.appendChild(npcBlock);
+                console.log("environmentBlock", environmentBlock);
+            });
+         </script>
+
     	<script src="../dist/xr-publisher.umd.js" nonce=""></script>
-		
+		        <script>
+        window.addEventListener('load', () => {
+            const publisher = new XRPublisher({
+                threeObjectPlugin: 'https://builds.sxp.digital/',
+                defaultAvatarAnimation: '',
+                defaultAvatar: 'https://items.sxp.digital/f8886983-a11b-4367-a19c-388662542d84/xrpublisherdefaultavatar.vrm',
+                defaultEnvironment: 'https://builds.sxp.digital/assets/default_grid.glb',
+                multiplayerAccess: 'loggedIn',
+                camCollisions: true,
+                enableAI: true,
+                enableNetworking: false,
+                enableVoiceChat: false
+            });
+            publisher.init();
+        });
+        </script>
+
 
     
     

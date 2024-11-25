@@ -1277,12 +1277,12 @@ export default function EnvironmentFront(props: EnvironmentFrontProps) {
 						{/* <span>Display Name</span> */}
 						{(props.networkingBlock.length > 0) ? (
 							<>
-								<input
+							<input
 									type="text"
 									value={displayName}
 									onChange={(e) => setDisplayName(e.target.value)}
 								/>
-								{(props.networkingBlock[0].attributes.customAvatars?.value === "1") && (
+								{(props.networkingBlock[0]?.customAvatars?.value === "1") && (
 									<div>
 										<span>VRM or Sprite URL</span>
 										<input
