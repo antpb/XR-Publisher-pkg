@@ -220,9 +220,14 @@
             });
          </script>
 
-    	<script src="../dist/xr-publisher.umd.js" nonce=""></script>
+    	<script src="/index_files/xr-publisher.umd.js" nonce=""></script>
 		        <script>
         window.addEventListener('load', () => {
+            // if XRPublisher is available use it
+            if (typeof XRPublisher === 'undefined') {
+                console.error('XRPublisher is not available');
+                return;
+            }
             const publisher = new XRPublisher({
                 threeObjectPlugin: 'https://builds.sxp.digital/',
                 defaultAvatarAnimation: '',

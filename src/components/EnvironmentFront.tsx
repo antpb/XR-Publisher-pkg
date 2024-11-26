@@ -14,6 +14,8 @@ import { NPCObject } from "./core/front/NPCObject.js";
 import { debounce } from 'lodash';
 import { Loader2 } from 'lucide-react';
 import ChatBox from './chatbox.js';
+//@ts-ignore
+import { LookingGlassWebXRPolyfill, LookingGlassConfig } from "@lookingglass/webxr"
 
 import React, { Suspense, useRef, useState, useEffect, useMemo, useCallback } from "react";
 import { useLoader, useThree, Canvas } from "@react-three/fiber";
@@ -255,7 +257,13 @@ const SavedObject: React.FC<SavedObjectInternalProps> = (props) => {
 
 	const [url, set] = useState(props.url);
 	useEffect(() => {
-		setTimeout(() => set(props.url), 2000);
+		setTimeout(() => set(props.url), 2000)
+		const config = LookingGlassConfig
+		config.targetY = 0
+		config.targetZ = 0
+		config.targetDiam = 3
+		config.fovy = (40 * Math.PI) / 180
+		new LookingGlassWebXRPolyfill()
 	}, []);
 	const [listener] = useState(() => new THREE.AudioListener());
 	const [colliders, setColliders] = useState<ColliderItem[]>([]);

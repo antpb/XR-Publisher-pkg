@@ -218,7 +218,7 @@ export default function ChatBox({
 
 	return (
 		<div
-			className={`fixed bottom-4 right-4 w-96 rounded-lg shadow-xl bg-gray-900/95 backdrop-blur border border-gray-800 
+			className={`absolute bottom-20 right-4 w-96 rounded-lg shadow-xl bg-gray-900/95 backdrop-blur border border-gray-800 
     transition-all duration-200 ease-in-out ${isOpen ? 'h-[500px]' : 'h-14'}`}
 			style={{ zIndex: 9999, pointerEvents: 'auto' }}
 			onClick={e => e.stopPropagation()}
