@@ -3,6 +3,10 @@ import { useFrame, useLoader, useThree } from "@react-three/fiber";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader";
 import EasyStar from "easystarjs";
+import { Mesh, PlaneGeometry, MeshBasicMaterial } from 'three';
+
+import { useNPCPathfinding } from "./NPCPathfinding";
+
 
 // import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import {
@@ -16,6 +20,9 @@ import {
 	AnimationMixer,
 	Vector3,
 	LoopRepeat,
+	DoubleSide,
+	Group,
+	Object3D
 } from "three";
 import { useAnimations, Text } from "@react-three/drei";
 import { GLTFAudioEmitterExtension } from "three-omi";
@@ -79,8 +86,8 @@ function loadMixamoAnimation(url: string, vrm: VRM) {
 		const _vec3 = new Vector3();
 
 		// Adjust with reference to hips height.
-		const mixamoHips = (asset as THREE.Group).getObjectByName("mixamorigHips");
-		const regularHips = (asset as THREE.Group).getObjectByName("hips");
+		const mixamoHips = (asset as Group).getObjectByName("mixamorigHips");
+		const regularHips = (asset as Group).getObjectByName("hips");
 		let mainHip;
 		if (mixamoHips) {
 			mainHip = mixamoHips.position.y;
@@ -103,7 +110,7 @@ function loadMixamoAnimation(url: string, vrm: VRM) {
 			const vrmNodeName = vrm.humanoid?.getNormalizedBoneNode(
 				vrmBoneName as VRMHumanBoneName
 			)?.name;
-			const mixamoRigNode = (asset as THREE.Group).getObjectByName(
+			const mixamoRigNode = (asset as Group).getObjectByName(
 				mixamoRigName
 			);
 
@@ -178,6 +185,8 @@ export function NPCObject(model: NPCProps): JSX.Element {
 	const currentRotation = useRef(0);
 	const isChangingDirection = useRef(false);
 	const pathGenerationCooldown = useRef(false);
+	const navMeshInitialized = useRef(false);
+
 
 	// Add these constants
 	const turnSpeed = 5; // Adjust this value to change rotation speed (lower = smoother)
@@ -201,7 +210,6 @@ export function NPCObject(model: NPCProps): JSX.Element {
 		jump: null,
 		falling: null,
 	});
-
 	const [activeMessage, setActiveMessage] = useState([]);
 	const headPositionY = useRef<number>(0);
 	const [url, set] = useState(model.url);
@@ -231,15 +239,82 @@ export function NPCObject(model: NPCProps): JSX.Element {
 	// 	// create variable that converts activeMessage to json
 	// }, [activeMessage]);
 
-	const [listener] = useState(() => new AudioListener());
 	const { scene, clock } = useThree();
-	useThree(({ camera }) => {
-		camera.add(listener);
-	});
+
+	useEffect(() => {
+		if (!scene || navMeshCreated.current) return;
+	  
+		const size = 40;
+		const segments = 8;
+		const geometry = new PlaneGeometry(size, size, segments, segments);
+		
+		// Ensure all vertices are at y=0
+		const positions = geometry.attributes.position.array;
+		for (let i = 1; i < positions.length; i += 3) {
+			positions[i] = 0;
+		}
+		geometry.computeVertexNormals();
+		
+		const material = new MeshBasicMaterial({ 
+			visible: true,
+			wireframe: true,
+			color: 0xff0000,
+			side: DoubleSide
+		});
+		
+		const plane = new Mesh(geometry, material);
+		
+		// Position navmesh at ground level
+		const charPos = new Vector3(model.positionX, 0, model.positionZ);
+		plane.position.copy(charPos);
+		plane.rotateX(-Math.PI / 2);
+		
+		console.log("Creating NavMesh:", {
+			vertexCount: geometry.attributes.position.count,
+			center: charPos.toArray(),
+			bounds: {
+				xMin: charPos.x - size/2,
+				xMax: charPos.x + size/2,
+				zMin: charPos.z - size/2,
+				zMax: charPos.z + size/2
+			}
+		});
+		
+		navMesh.current = plane;
+		navMeshCreated.current = true;
+		scene.add(plane);
+	  
+		return () => {
+			scene.remove(plane);
+			navMesh.current = null;
+			navMeshCreated.current = false;
+		};
+	}, [scene, model.positionX, model.positionZ]);		  
+
+	// create plane and assign as navmesh
+	// Inside NPCObject component
+	const navMesh = useRef<Mesh | null>(null);
+	const navMeshCreated = useRef(false);
+	const initialPosition = new Vector3(model.positionX, model.positionY, model.positionZ);
+	const { updateMovement, pathfindingState, generateRandomPath } = useNPCPathfinding(
+		scene,
+		navMesh.current,
+		initialPosition,
+		walkSpeed,
+		turnSpeed
+	);
+
+
 	// vrm helpers
 	// const helperRoot = new Group();
 	// helperRoot.renderOrder = 10000;
 	// scene.add(helperRoot);
+	useEffect(() => {
+		if (navMesh.current && navMeshInitialized.current) {
+			console.log("NavMesh ready, generating initial path");
+			generateRandomPath();
+		}
+	}, [navMesh.current, navMeshInitialized.current]);
 
 	const gltf = useLoader(GLTFLoader, url, (loader) => {
 		// const dracoLoader = new DRACOLoader();
@@ -247,9 +322,6 @@ export function NPCObject(model: NPCProps): JSX.Element {
 		// dracoLoader.setDecoderConfig({type: 'js'});
 		// loader.setDRACOLoader(dracoLoader);
 
-		loader.register(
-			(parser) => new GLTFAudioEmitterExtension(parser, listener)
-		);
 		// if (openbrushEnabled === true) {
 		// 	loader.register(
 		// 		(parser) =>
@@ -293,7 +365,7 @@ export function NPCObject(model: NPCProps): JSX.Element {
 		const vrm = gltf.userData.vrm;
 		VRMUtils.rotateVRM0(vrm);
 		// Disable frustum culling
-		vrm.scene.traverse((obj: THREE.Object3D) => {
+		vrm.scene.traverse((obj: Object3D) => {
 			obj.frustumCulled = false;
 		});
 		vrm.scene.name = "assistant";
@@ -316,96 +388,9 @@ export function NPCObject(model: NPCProps): JSX.Element {
 			}
 		}, [currentVrm]);
 
-		useEffect(() => {
-			// Create a grid based on the world size
-			const grid = Array(gridSize)
-				.fill()
-				.map(() => Array(gridSize).fill(0));
-
-			// Set up pathfinding
-			easystar.current.setGrid(grid);
-			easystar.current.setAcceptableTiles([0]);
-			easystar.current.enableDiagonals();
-			easystar.current.setIterationsPerCalculation(1000);
-
-			// Generate initial random path
-			generateRandomPath();
-		}, []);
-
-		const smoothPath = (path, smoothingFactor = 0.5) => {
-			if (!path || path.length < 3) return path;
-
-			const smoothedPath = [path[0]];
-
-			for (let i = 1; i < path.length - 1; i++) {
-				const prev = path[i - 1];
-				const current = path[i];
-				const next = path[i + 1];
-
-				const smoothed = new Vector3(
-					current.x + (prev.x + next.x - 2 * current.x) * smoothingFactor,
-					current.y,
-					current.z + (prev.z + next.z - 2 * current.z) * smoothingFactor
-				);
-
-				smoothedPath.push(smoothed);
-			}
-
-			smoothedPath.push(path[path.length - 1]);
-			return smoothedPath;
-		};
-
 		// First, add a state to track if we're turning
 		const isChangingDirection = useRef(false);
 		const pathGenerationCooldown = useRef(false);
-
-		const generateRandomPath = () => {
-			if (pathGenerationCooldown.current) return;
-
-			const startX = Math.floor(model.positionX / cellSize + gridSize / 2);
-			const startZ = Math.floor(model.positionZ / cellSize + gridSize / 2);
-
-			// Generate new end point with some minimum distance
-			let endX, endZ;
-			do {
-				endX = Math.floor(Math.random() * gridSize);
-				endZ = Math.floor(Math.random() * gridSize);
-			} while (
-				Math.abs(endX - startX) < gridSize / 4 ||
-				Math.abs(endZ - startZ) < gridSize / 4
-			);
-
-			easystar.current.findPath(startX, startZ, endX, endZ, (path) => {
-				if (path) {
-					const rawPath = path.map(
-						(point) =>
-							new Vector3(
-								(point.x - gridSize / 2) * cellSize,
-								model.positionY + 1,
-								(point.y - gridSize / 2) * cellSize
-							)
-					);
-
-					currentPath.current = smoothPath(rawPath, 0.5);
-					currentPathIndex.current = 0;
-
-					if (currentPath.current.length > 0) {
-						targetPosition.current.copy(currentPath.current[0]);
-						isMoving.current = true;
-					}
-				}
-			});
-
-			easystar.current.calculate();
-
-			// Add a short cooldown to prevent too frequent path generation
-			pathGenerationCooldown.current = true;
-			setTimeout(() => {
-				pathGenerationCooldown.current = false;
-			}, 100);
-		};
-
-
 
 		let lastUpdateTime = 0;
 		useEffect(() => {
@@ -491,7 +476,17 @@ export function NPCObject(model: NPCProps): JSX.Element {
 			const currentTime = state.clock.elapsedTime;
 			const timeSinceLastUpdate = currentTime - lastUpdateTime;
 
-			if (currentVrm) {
+			if (currentVrm && currentMixer) {
+				if (timeSinceLastUpdate >= 1.0) {  // Log every second
+					lastUpdateTime = currentTime;
+					console.log("Movement state:", {
+						isMoving: pathfindingState.current.isMoving,
+						currentPath: pathfindingState.current.currentPath,
+						currentTargetIndex: pathfindingState.current.currentTargetIndex,
+						position: currentVrm.scene.position,
+					});
+				}
+
 				// Update text position
 				if (timeSinceLastUpdate >= 0.1) {
 					lastUpdateTime = currentTime;
@@ -506,84 +501,20 @@ export function NPCObject(model: NPCProps): JSX.Element {
 					}
 				}
 
-				// Handle movement and animations
-				if (currentPath.current && isMoving.current) {
-					const currentPos = new Vector3(
-						currentVrm.scene.position.x,
-						currentVrm.scene.position.y,
-						currentVrm.scene.position.z
-					);
-
-					const distanceToTarget = new Vector3(
-						targetPosition.current.x - currentPos.x,
-						0,
-						targetPosition.current.z - currentPos.z
-					).length();
-
-					// Check if we need a new path before we get too close to the end
-					if (currentPathIndex.current >= currentPath.current.length - 2) {
-						generateRandomPath();
+				// Update movement and animations
+				updateMovement(
+					delta,
+					currentVrm.scene,
+					currentMixer,
+					{
+						idle: animationsRef.current.idle,
+						walking: animationsRef.current.walking
 					}
+				);
 
-					if (distanceToTarget < 0.1) {
-						currentPathIndex.current++;
-
-						if (currentPathIndex.current < currentPath.current.length) {
-							targetPosition.current.copy(currentPath.current[currentPathIndex.current]);
-						}
-					}
-
-					// Calculate desired direction
-					const direction = new Vector3()
-						.subVectors(targetPosition.current, currentPos)
-						.normalize();
-
-					// Calculate target angle
-					let targetAngle = Math.atan2(direction.x, direction.z) + Math.PI;
-
-					// Normalize angles
-					while (targetAngle - currentRotation.current > Math.PI) targetAngle -= Math.PI * 2;
-					while (targetAngle - currentRotation.current < -Math.PI) targetAngle += Math.PI * 2;
-
-					const angleDiff = Math.abs(targetAngle - currentRotation.current);
-					isChangingDirection.current = angleDiff > directionChangeThreshold;
-
-					// Smoothly interpolate rotation
-					const rotationDelta = ((targetAngle - currentRotation.current) * turnSpeed * delta);
-					currentRotation.current += rotationDelta;
-					currentRotation.current = currentRotation.current % (Math.PI * 2);
-
-					// Apply rotation
-					currentVrm.scene.rotation.y = currentRotation.current;
-
-					// Calculate movement speed based on turning
-					let currentSpeed = walkSpeed;
-					if (isChangingDirection.current) {
-						// Reduce speed during sharp turns
-						currentSpeed *= Math.max(0.4, 1 - (angleDiff / Math.PI));
-					}
-
-					// Move the VRM model
-					const moveAmount = direction.multiplyScalar(currentSpeed * delta);
-					currentVrm.scene.position.add(moveAmount);
-
-					// Update animation speed smoothly
-					if (animationsRef.current.walking) {
-						const walkingAction = animationsRef.current.walking;
-						const targetTimeScale = isChangingDirection.current ? 0.7 : 1;
-						walkingAction.timeScale += (targetTimeScale - walkingAction.timeScale) * delta * 5;
-					}
-
-					handleAnimation(true, delta);
-				} else {
-					handleAnimation(false, delta);
-				}
-
-				// Update VRM and mixer - only do this once per frame
+				// Update VRM and mixer
 				currentVrm.update(delta);
-				if (currentMixer) {
-					currentMixer.update(delta);
-				}
+				currentMixer.update(delta);
 			}
 		});
 

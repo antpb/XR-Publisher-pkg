@@ -258,21 +258,21 @@ const SavedObject: React.FC<SavedObjectInternalProps> = (props) => {
 	const [url, set] = useState(props.url);
 	useEffect(() => {
 		setTimeout(() => set(props.url), 2000)
-		const config = LookingGlassConfig
-		config.targetY = 0
-		config.targetZ = 0
-		config.targetDiam = 3
-		config.fovy = (40 * Math.PI) / 180
-		new LookingGlassWebXRPolyfill()
+		// const config = LookingGlassConfig
+		// config.targetY = 0
+		// config.targetZ = 0
+		// config.targetDiam = 3
+		// config.fovy = (40 * Math.PI) / 180
+		// new LookingGlassWebXRPolyfill()
 	}, []);
-	const [listener] = useState(() => new THREE.AudioListener());
+	// const [listener] = useState(() => new THREE.AudioListener());
 	const [colliders, setColliders] = useState<ColliderItem[]>([]);
 	const [meshes, setMeshes] = useState<Object3D | undefined>();
 	const [portals, setPortals] = useState<Object3D[]>([]);
 
-	useThree(({ camera }) => {
-		camera.add(listener);
-	});
+	// useThree(({ camera }) => {
+	// 	camera.add(listener);
+	// });
 
 
 	const gltf = useLoader(GLTFLoader, url, (loader) => {
@@ -281,9 +281,9 @@ const SavedObject: React.FC<SavedObjectInternalProps> = (props) => {
 		// dracoLoader.setDecoderConfig({ type: 'js' });
 		// loader.setDRACOLoader(dracoLoader);
 
-		loader.register(
-			(parser) => new GLTFAudioEmitterExtension(parser, listener)
-		);
+		// loader.register(
+		// 	(parser) => new GLTFAudioEmitterExtension(parser, listener)
+		// );
 
 		loader.register((parser) => {
 			return new VRMLoaderPlugin(parser);
@@ -469,6 +469,8 @@ const SavedObject: React.FC<SavedObjectInternalProps> = (props) => {
 		setMeshes(meshesScene);
 		setPortals(portalsToAdd);
 		props.setSpawnPoints(spawnPointsToAdd.map(point => [point.position.x, point.position.y, point.position.z]));
+		// @ts-ignore
+		props.setPhysicsEnabled(true);
 		// End OMI_collider logic.
 	}, []);
 
@@ -541,7 +543,8 @@ export default function EnvironmentFront(props: EnvironmentFrontProps) {
 	const [activeChatNPC, setActiveChatNPC] = useState<string | null>(null);
 	const [roomId, setRoomId] = useState<string | undefined>();
 	const [initializing, setInitializing] = useState(true);
-
+	const [ physicsEnabled, setPhysicsEnabled ] = useState(false);
+	console.log("all the props", props);
 	const initializeChatSession = async (npcName: string, personality: string) => {
 		try {
 			const response = await fetch('https://xr-publisher.sxpdigital.workers.dev/api/character/session', {
@@ -780,7 +783,7 @@ export default function EnvironmentFront(props: EnvironmentFrontProps) {
 									}
 									<ContextBridgeComponent />
 									<Physics
-										erp={1}
+										paused={!physicsEnabled}
 										// timestep = {1/30}
 										// gravity={[0, -9.8, 0]}
 										// interpolate={false}
@@ -792,6 +795,13 @@ export default function EnvironmentFront(props: EnvironmentFrontProps) {
 										timeStep={"vary"}
 										updateLoop={"follow"}
 										updatePriority={-100}
+										// paused={!physicsEnabled}
+										// debug={true}
+										// timeStep={1/60}
+										// updateLoop="independent"
+										// gravity={[0, -9.81, 0]}
+										// interpolate={true}
+									
 									>
 										<Player
 											spawnPoint={props.spawnPoint}
@@ -831,6 +841,8 @@ export default function EnvironmentFront(props: EnvironmentFrontProps) {
 														animations={props.animations}
 														playerData={props.userData}
 														setSpawnPoints={setSpawnPoints}
+														//@ts-ignore
+														setPhysicsEnabled={setPhysicsEnabled}
 													/>
 													{Object.values(props.sky).map(
 														(item, index) => {
@@ -1086,7 +1098,7 @@ export default function EnvironmentFront(props: EnvironmentFrontProps) {
 															alt: getAttributeSafe(model, 'alt'),
 															collidable: getAttributeSafe(model, 'collidable'),
 														};
-
+														console.log("atts", attributes);
 														if (!objectsInRoom.includes(attributes.alt)) {
 															setObjectsInRoom([...objectsInRoom, attributes.alt]);
 														}

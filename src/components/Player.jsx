@@ -3,7 +3,7 @@ import { Box3,
 	Raycaster,
 	PerspectiveCamera,
 	ArrowHelper,
-	Euler, MathUtils, NearestFilter, LoopOnce, DoubleSide, MeshBasicMaterial, RingGeometry, BoxGeometry, AudioListener, Color, Group, Quaternion, Matrix4, VectorKeyframeTrack, QuaternionKeyframeTrack, LoopPingPong, AnimationClip, NumberKeyframeTrack, AnimationMixer, Vector3, Vector2, BufferGeometry, CircleGeometry, sRGBEncoding } from "three";
+	Euler, MathUtils, NearestFilter, LoopOnce, DoubleSide, MeshBasicMaterial, RingGeometry, BoxGeometry, AudioListener, Color, Group, Quaternion, Matrix4, VectorKeyframeTrack, QuaternionKeyframeTrack, LoopPingPong, AnimationClip, NumberKeyframeTrack, AnimationMixer, Vector3, Vector2, BufferGeometry, CircleGeometry } from "three";
 import { TextureLoader } from "three/src/loaders/TextureLoader";
 import { useFrame, useLoader, useThree, Interactive } from "@react-three/fiber";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
@@ -1117,9 +1117,9 @@ const debugArrows = {
 		<Ecctrl
 			ref={characterRef}
 			position={[
-				Number(props.spawnPoint?.[0] || 0), 
-				Number(props.spawnPoint?.[1] || 0), 
-				Number(props.spawnPoint?.[2] || 0)
+				Number(props.spawnPoint?.[0] || 0.1), 
+				Number(props.spawnPoint?.[1] || 0.1), 
+				Number(props.spawnPoint?.[2] || 0.1)
 			]}
 			turnSpeed={20}
 			maxVelLimit={5}

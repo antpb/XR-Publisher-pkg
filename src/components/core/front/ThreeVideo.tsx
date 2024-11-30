@@ -9,7 +9,6 @@ MeshStandardMaterial,
 DoubleSide,
 Mesh,
 CircleGeometry,
-sRGBEncoding,
 AudioListener,
 AudioLoader,
 PositionalAudio,
@@ -91,7 +90,6 @@ useEffect(() => {
 			setScreenParent((foundScreen as any).parent);
 		}
 		const videoTexture = new VideoTexture(video);
-		videoTexture.encoding = sRGBEncoding;
 
 		// new mesh standard material with the map texture
 		const material = new MeshStandardMaterial({
@@ -208,7 +206,6 @@ useEffect(() => {
 										<videoTexture
 											attach="map"
 											args={[video]}
-											encoding={sRGBEncoding}
 										/>
 									</meshStandardMaterial>
 									<planeGeometry

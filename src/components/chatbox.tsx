@@ -4,6 +4,9 @@ import { set } from 'lodash';
 
 function generateRoomIdFromPath(path: string): string {
   const cleanPath = path.replace(/^\/+|\/+$/g, '').split('?')[0];
+
+  // if cleanPath is empty, return default room ID
+  if (!cleanPath) return 'default';
   return cleanPath.replace(/\//g, '-').toLowerCase();
 }
 

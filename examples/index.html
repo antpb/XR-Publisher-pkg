@@ -63,8 +63,10 @@
             <!-- World Container -->
             <div class="world-container">
                 <div id="world-view">
-					<three-environment-block class="wp-block-xr-publisher-environment alignfull" devicetarget="vr" threeobjecturl="https://items.sxp.digital/f8886983-a11b-4367-a19c-388662542d84/defaultfloor.glb" scale="1" positiony="-1" rotationy="0" animations="" camcollisions="1">
-                        <three-networking-block class="wp-block-xr-publisher-three-networking-block" participantlimit="5" customavatars="1"></three-networking-block>
+					<three-environment-block devicetarget="vr" threeobjecturl="https://items.sxp.digital/f8886983-a11b-4367-a19c-388662542d84/Dungeon1.glb" scale="1" positiony="-1" rotationy="0" animations="" camcollisions="1">
+						<three-networking-block participantlimit="5" customavatars="1"></three-networking-block>
+						<three-model-block threeobjecturl="https://items.sxp.digital/f8886983-a11b-4367-a19c-388662542d84/3ovcafe2.glb" scalex="1" scaley="1" scalez="1" positionx="0.01" positiony="-1" positionz="8" rotationx="0" rotationy="0" rotationz="0" animations="" collidable="1" alt=""></three-model-block>
+						<three-sky-block distance="170000" rayleigh="1" sunpositionx="0" sunpositiony="1" sunpositionz="-10000"></three-sky-block>
 					</three-environment-block>
                 </div>
             </div>
@@ -204,8 +206,8 @@
                 const npcBlock = document.createElement('three-npc-block');
                 npcBlock.setAttribute('class', 'wp-block-xr-publisher-npc-block');
                 npcBlock.setAttribute('threeobjecturl', safeCharacter.vrmUrl);
-                npcBlock.setAttribute('positionx', '0');
-                npcBlock.setAttribute('positiony', '-1');
+                npcBlock.setAttribute('positionx', '-1');
+                npcBlock.setAttribute('positiony', '0');
                 npcBlock.setAttribute('positionz', '-2');
                 npcBlock.setAttribute('rotationx', '0');
                 npcBlock.setAttribute('rotationy', '0');
