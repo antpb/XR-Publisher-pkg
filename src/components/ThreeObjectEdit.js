@@ -6,7 +6,6 @@ import {
 	Color,
 	MeshBasicMaterial,
 	DoubleSide,
-	sRGBEncoding,
 	AudioListener,
 	BoxGeometry,
 	Mesh
@@ -716,7 +715,6 @@ function VideoObject(threeVideo) {
 			  setScreenParent(foundScreen.parent);
 			  // Update screen's material with video texture
 			  const videoTexture = new VideoTexture(video);
-			  videoTexture.colorSpace= sRGBEncoding;
 			  const material = new MeshBasicMaterial({ map: videoTexture, toneMapped: false });
 			  foundScreen.material = material;
 			}
@@ -821,7 +819,6 @@ function VideoObject(threeVideo) {
 								<videoTexture
 									attach="map"
 									args={[video]}
-									encoding={sRGBEncoding}
 								/>
 							</meshBasicMaterial>
 							<planeGeometry

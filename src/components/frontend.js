@@ -230,13 +230,22 @@ if (threeApp && threeApp.length > 0) {
 				root.render(
 					<>
 							<>
-								<div id="networking" style={{display: "none"}} class="xr-publisher-networking-controls">
+								<div
+									id="networking"
+									style={
+										{
+											display: "none",
+											zIndex: "1000",
+										}
+									} 
+									class="xr-publisher-networking-controls"
+								>
 									{/* <div id="session-id">Room: </div> */}
 									{/* <p>Peers</p> */}
 									{/* <div id="peers"></div> */}
 									{/* <p>Messages</p> */}
 									<div id="messages" style={{display: "none"}}></div>
-									<div id="network-ui-container" style={{display: "flex"}}>
+									<div id="network-ui-container" style={{display: "block", position: "absolute", zIndex: "1000"}}>
 										<XRButton
 											// background-image: url(&quot;https://threetheme.local/wp-content/plugins/xr-publisher/build/images/world_icon.7810cfaf.png&quot;); background-size: 30px; width: 40px; height: 40px; padding: 10px; margin-top: 3px; margin-right: 5px; margin-left: 5px; box-sizing: border-box; border-radius: 50%; background-position: center center; background-repeat: no-repeat; background-color: rgb(255, 255, 255); border: 1px solid rgb(149, 149, 149); cursor: pointer;
 											// define styles as the above 

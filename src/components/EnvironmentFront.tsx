@@ -13,6 +13,9 @@ import { ThreeImage } from "./core/front/ThreeImage";
 import { NPCObject } from "./core/front/NPCObject.js";
 import { debounce } from 'lodash';
 import { Loader2 } from 'lucide-react';
+import ChatBox from './chatbox.js';
+//@ts-ignore
+import { LookingGlassWebXRPolyfill, LookingGlassConfig } from "@lookingglass/webxr"
 
 import React, { Suspense, useRef, useState, useEffect, useMemo, useCallback } from "react";
 import { useLoader, useThree, Canvas } from "@react-three/fiber";
@@ -48,7 +51,7 @@ import { ContextBridgeComponent } from "./ContextBridgeComponent.js";
 // import { Reflector } from 'three/examples/jsm/objects/Reflector';
 
 import { defaultAvatarVRM } from "@/assets/index.js";
-  
+
 // import type {
 // 	SavedObjectProps,
 // 	// ThreeObjectFrontProps,
@@ -79,7 +82,7 @@ import { defaultAvatarVRM } from "@/assets/index.js";
 //   }
 
 
-	
+
 interface ColliderItem extends Array<Object3D | any> {
 	0: Object3D;
 	1: {
@@ -130,33 +133,47 @@ export interface CustomElement extends HTMLElement {
 	tagName: string;
 	getAttribute(name: string): string | null;
 	hasAttribute(name: string): boolean;
-  }
-  
+}
+
+interface ChatSession {
+	id: string;
+	npcName: string;
+	messages: Message[];
+}
+
+interface Message {
+	sender: string;
+	text: string;
+	timestamp: string;
+	error?: boolean;
+}
+
+
 
 function isCustomElement(element: unknown): element is CustomElement {
-	return element !== null && 
-		   typeof element === 'object' && 
-		   'tagName' in element && 
-		   'getAttribute' in element && 
-		   'hasAttribute' in element;
+	return element !== null &&
+		typeof element === 'object' &&
+		'tagName' in element &&
+		'getAttribute' in element &&
+		'hasAttribute' in element;
 }
-  
-  // Use these functions to handle attribute getting safely
-  function getAttributeSafe(element: unknown, attr: string): string {
+
+// Use these functions to handle attribute getting safely
+function getAttributeSafe(element: unknown, attr: string): string {
 	if (isCustomElement(element)) {
-	  return element.getAttribute(attr) || '';
+		return element.getAttribute(attr) || '';
 	}
 	return '';
-  }
-  
-  function hasAttributeSafe(element: unknown, attr: string): boolean {
+}
+
+function hasAttributeSafe(element: unknown, attr: string): boolean {
 	if (isCustomElement(element)) {
-	  return element.hasAttribute(attr);
+		return element.hasAttribute(attr);
 	}
 	return false;
-  }
-  
-  
+}
+
+
 
 function isMobile() {
 	return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -172,222 +189,51 @@ function goToPrivateRoom() {
 
 const Loading = ({ previewImage }: { previewImage: string }) => {
 	return (
-	  <div className="relative flex flex-col items-center justify-center min-h-screen bg-gradient-to-r from-slate-900 to-slate-800">
-		{/* Preview Image Background with Overlay */}
-		{previewImage && (
-		  <div 
-			className="absolute inset-0 opacity-20"
-			style={{
-			  backgroundImage: `url(${previewImage})`,
-			  backgroundSize: 'cover',
-			  backgroundPosition: 'center',
-			  filter: 'blur(8px)'
-			}}
-		  />
-		)}
-		
-		{/* Content Container */}
-		<div className="relative z-10 flex flex-col items-center space-y-6">
-		  {/* Loading Animation */}
-		  <div className="flex items-center justify-center">
-			<Loader2 className="w-12 h-12 text-white animate-spin" />
-		  </div>
-		  
-		  {/* Loading Text */}
-		  <div className="text-white/90 text-lg font-medium">
-			Loading Experience...
-		  </div>
-		  
-		  {/* Controls Info Card */}
-		  <div className="mt-8 px-6 py-4 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 text-white/90 text-sm">
-			<div className="flex items-center justify-center space-x-4">
-			  {['W', 'A', 'S', 'D'].map((key) => (
-				<div key={key} className="flex flex-col items-center">
-				  <div className="w-8 h-8 flex items-center justify-center border border-white/40 rounded bg-white/5">
-					{key}
-				  </div>
+		<div className="relative flex flex-col items-center justify-center min-h-screen bg-gradient-to-r from-slate-900 to-slate-800">
+			{/* Preview Image Background with Overlay */}
+			{previewImage && (
+				<div
+					className="absolute inset-0 opacity-20"
+					style={{
+						backgroundImage: `url(${previewImage})`,
+						backgroundSize: 'cover',
+						backgroundPosition: 'center',
+						filter: 'blur(8px)'
+					}}
+				/>
+			)}
+
+			{/* Content Container */}
+			<div className="relative z-10 flex flex-col items-center space-y-6">
+				{/* Loading Animation */}
+				<div className="flex items-center justify-center">
+					<Loader2 className="w-12 h-12 text-white animate-spin" />
 				</div>
-			  ))}
-			</div>
-			<div className="mt-2 text-center text-white/70 text-xs">
-			  Use to move
-			</div>
-		  </div>
-		</div>
-	  </div>
-	);
-  };  
 
-interface ChatBoxProps {
-	defaultMessage?: string;
-	messages?: string[];
-	setMessages: (messages: string[]) => void;
-	name: string;
-	personality: string;
-	objectAwareness: string;
-	nonce: string;
-	showUI: boolean;
-	objectsInRoom: string[];
-	style: React.CSSProperties;
-}
+				{/* Loading Text */}
+				<div className="text-white/90 text-lg font-medium">
+					Loading Experience...
+				</div>
 
-function ChatBox(props: ChatBoxProps) {
-	const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-		event.preventDefault();
-		event.stopPropagation();
-	};
-	useEffect(() => {
-		if (props.defaultMessage && (!props.messages || props.messages.length === 0)) {
-			let finalDefault = props.name + ': ' + props.defaultMessage;
-			props.setMessages([finalDefault]);
-		}
-	}, []);
-
-	const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
-		event.preventDefault();
-
-		const input = (event.target as HTMLFormElement).elements.namedItem('message') as HTMLInputElement;
-		const value = input.value;
-		input.value = '';
-
-		const inputMessageLog = 'Guest: ' + String(value);
-		const updatedMessages = [...(props.messages || []), inputMessageLog];
-
-		try {
-			let finalPersonality = props.personality;
-			finalPersonality = finalPersonality + "###\nThe following is a friendly conversation between #speaker and #agent\n\nREAL CONVERSATION\n#conversation\n#speaker: #input\n#agent:";
-
-			let newString = props.objectsInRoom.join(", ");
-			if (props.objectAwareness === "1") {
-				finalPersonality = finalPersonality.replace("###\nThe following is a", ("ITEMS IN WORLD: " + String(newString) + "\n###\nThe following is a"));
-			}
-
-			const postData = {
-				Input: {
-					Input: value,
-					Speaker: "Guest",
-					Agent: props.name,
-					Client: 1,
-					ChannelID: "wordpress",
-					Entity: 1,
-					Channel: "wordpress",
-					eth_private_key: '0',
-					eth_public_address: '0',
-					personality: finalPersonality,
-					messages: updatedMessages.slice(-5)  // Send the last 5 messages (including the new one)
-				}
-			};
-
-			const response = await fetch('/wp-json/wp/v2/callAlchemy', {
-				method: 'POST',
-				headers: {
-					'Content-Type': 'application/json',
-					'X-WP-Nonce': props.nonce,
-					'Authorization': ('Bearer ' + String(props.nonce))
-				},
-				body: JSON.stringify(postData)
-			});
-
-			const data = await response.json();
-			let thisMessage = typeof data === 'string' ? JSON.parse(data) : data;
-			console.log("Received message:", thisMessage);
-
-			let formattedMessage = '';
-
-			if (thisMessage?.model === "gpt-4o-2024-08-06") {
-				const contentJson = JSON.parse(thisMessage.choices[0].message.content);
-				formattedMessage = props.name + ': ' + contentJson.response;
-			} else if (thisMessage?.model === "gpt-4-0314" || thisMessage?.model === "gpt-3.5-turbo-0301") {
-				formattedMessage = props.name + ': ' + thisMessage.choices[0].message.content;
-			} else if (thisMessage?.outputs) {
-				formattedMessage = props.name + ': ' + Object.values(thisMessage.outputs)[0];
-			} else if (thisMessage?.name === "Server") {
-				formattedMessage = thisMessage.name + ': ' + thisMessage.message;
-			} else if (thisMessage?.davinciData) {
-				formattedMessage = props.name + ': ' + thisMessage.davinciData.choices[0].text;
-			} else {
-				console.error("Unexpected message format:", thisMessage);
-				formattedMessage = props.name + ': Sorry, I couldn\'t process that response.';
-			}
-
-			props.setMessages([...updatedMessages, formattedMessage]);
-		} catch (error) {
-			console.error(error);
-		}
-	};
-
-	const ClickStop: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-		return <div onClick={e => e.stopPropagation()}>{children}</div>;
-	};
-
-	const [open, setOpen] = useState(false);
-	const onSwitch = (e: React.MouseEvent<HTMLButtonElement>) => {
-		e.preventDefault();
-		e.stopPropagation();
-		setOpen(prevOpen => !prevOpen);
-	};
-
-	if (isMobile()) {
-		return (
-			<>
-				<button className="xr-publisher-chat-button" onClick={onSwitch}>Chat</button>
-				{open && (
-					<ClickStop>
-						<button className="xr-publisher-chat-button" onClick={onSwitch}>Close</button>
-						<div className="xr-publisher-chat-container" style={{ pointerEvents: "auto", position: "relative", paddingTop: "14px", paddingLeft: "5px", paddingRight: "5px", overflowY: "scroll", paddingBottom: "5px", boxSizing: "border-box", zIndex: 100, marginTop: "-350px", width: "300px", height: "280px", fontSize: ".8em", color: "#FFFFFF", bottom: "0", left: "2%", backgroundColor: "transparent" }}>
-							<div style={{ pointerEvents: "auto", position: "relative", paddingTop: "14px", paddingLeft: "5px", paddingRight: "5px", overflowY: "scroll", paddingBottom: "5px", boxSizing: "border-box", zIndex: 100, width: "275px", maxHeight: "250px", height: "250px", fontSize: "0.8em", color: "#FFFFFF", backgroundColor: "#" }}>
-								<ScrollableFeed>
-									<ul style={{ paddingLeft: "0px", marginLeft: "5px", listStyle: "none" }}>
-										{props.showUI && props.messages && props.messages.length > 0 && props.messages.map((message, index) => (
-											<li style={{ background: "#000000db", borderRadius: "30px", padding: "10px 20px" }} key={index}>{message}</li>
-										))}
-									</ul>
-								</ScrollableFeed>
+				{/* Controls Info Card */}
+				<div className="mt-8 px-6 py-4 bg-white/10 backdrop-blur-sm rounded-lg border border-white/20 text-white/90 text-sm">
+					<div className="flex items-center justify-center space-x-4">
+						{['W', 'A', 'S', 'D'].map((key) => (
+							<div key={key} className="flex flex-col items-center">
+								<div className="w-8 h-8 flex items-center justify-center border border-white/40 rounded bg-white/5">
+									{key}
+								</div>
 							</div>
-							<div style={{ width: "100%", height: "5%", position: "relative", bottom: "0px", boxSizing: "border-box", padding: "15px", paddingLeft: "7px" }}>
-								{/* {props.messages.map((message, index) => (
-								<p key={index}>{message}</p>
-								))} */}
-								<form style={{ display: "flex" }} autoComplete="off" onSubmit={handleSubmit}>
-									<input autoComplete="false" style={{ height: "30px", pointerEvents: "auto", borderTopLeftRadius: "15px", borderBottomLeftRadius: "15px", borderTopRightRadius: "0px", borderBottomRightRadius: "0px" }} type="text" name="message" onInput={handleChange} onChange={handleChange} onFocus={(e) => { e.preventDefault() }} />
-									<button className="xr-publisher-chat-button-send" style={{ height: "30px", background: "#9100ff", color: "white", fontSize: ".9em", lineHeight: ".3em", borderTopRightRadius: "15px", borderBottomRightRadius: "15px", borderTopLeftRadius: "0px", borderBottomLeftRadius: "0px" }} type="submit">Send</button>
-								</form>
-							</div>
-						</div>
-					</ClickStop>
-				)}
-			</>
-		);
-	} else {
-		return (
-			<>
-				<ClickStop>
-					<div style={{ pointerEvents: "auto", position: "relative", paddingTop: "14px", paddingLeft: "5px", paddingRight: "5px", overflowY: "scroll", paddingBottom: "5px", boxSizing: "border-box", zIndex: 100, marginTop: "-350px", width: "300px", height: "280px", fontSize: ".8em", color: "#FFFFFF", bottom: "0", left: "2%", backgroundColor: "transparent" }}>
-						<div style={{ pointerEvents: "auto", position: "relative", paddingTop: "14px", paddingLeft: "5px", paddingRight: "5px", overflowY: "scroll", paddingBottom: "5px", boxSizing: "border-box", zIndex: 100, width: "275px", maxHeight: "250px", height: "250px", fontSize: "0.8em", color: "#FFFFFF", backgroundColor: "#" }}>
-							<ScrollableFeed>
-								<ul style={{ paddingLeft: "0px", marginLeft: "5px", listStyle: "none" }}>
-									{props.showUI && props.messages && props.messages.length > 0 && props.messages.map((message, index) => (
-										<li style={{ background: "#000000db", borderRadius: "30px", padding: "10px 20px" }} key={index}>{message}</li>
-									))}
-								</ul>
-							</ScrollableFeed>
-						</div>
-						<div style={{ width: "100%", height: "5%", position: "relative", bottom: "0px", boxSizing: "border-box", padding: "15px", paddingLeft: "7px" }}>
-							{/* {props.messages.map((message, index) => (
-									<p key={index}>{message}</p>
-									))} */}
-							<form style={{ display: "flex" }} autoComplete="off" onSubmit={handleSubmit}>
-								<input type="text" style={{ display: "none" }} />
-								<input autoComplete="off" style={{ height: "30px", pointerEvents: "auto", borderTopLeftRadius: "15px", borderBottomLeftRadius: "15px", borderTopRightRadius: "0px", borderBottomRightRadius: "0px" }} type="text" name="message" onInput={handleChange} onChange={handleChange} />
-								<button className="xr-publisher-chat-button-send" style={{ height: "30px", background: "#9100ff", color: "white", fontSize: ".9em", lineHeight: ".3em", borderTopRightRadius: "15px", borderBottomRightRadius: "15px", borderTopLeftRadius: "0px", borderBottomLeftRadius: "0px" }} type="submit">Send</button>
-							</form>
-						</div>
+						))}
 					</div>
-				</ClickStop>
-			</>
-		);
-	}
-}
+					<div className="mt-2 text-center text-white/70 text-xs">
+						Use to move
+					</div>
+				</div>
+			</div>
+		</div>
+	);
+};
 
 /**
  * Represents a saved object in a virtual reality world.
@@ -411,16 +257,22 @@ const SavedObject: React.FC<SavedObjectInternalProps> = (props) => {
 
 	const [url, set] = useState(props.url);
 	useEffect(() => {
-		setTimeout(() => set(props.url), 2000);
+		setTimeout(() => set(props.url), 2000)
+		// const config = LookingGlassConfig
+		// config.targetY = 0
+		// config.targetZ = 0
+		// config.targetDiam = 3
+		// config.fovy = (40 * Math.PI) / 180
+		// new LookingGlassWebXRPolyfill()
 	}, []);
-	const [listener] = useState(() => new THREE.AudioListener());
+	// const [listener] = useState(() => new THREE.AudioListener());
 	const [colliders, setColliders] = useState<ColliderItem[]>([]);
 	const [meshes, setMeshes] = useState<Object3D | undefined>();
 	const [portals, setPortals] = useState<Object3D[]>([]);
 
-	useThree(({ camera }) => {
-		camera.add(listener);
-	});
+	// useThree(({ camera }) => {
+	// 	camera.add(listener);
+	// });
 
 
 	const gltf = useLoader(GLTFLoader, url, (loader) => {
@@ -429,9 +281,9 @@ const SavedObject: React.FC<SavedObjectInternalProps> = (props) => {
 		// dracoLoader.setDecoderConfig({ type: 'js' });
 		// loader.setDRACOLoader(dracoLoader);
 
-		loader.register(
-			(parser) => new GLTFAudioEmitterExtension(parser, listener)
-		);
+		// loader.register(
+		// 	(parser) => new GLTFAudioEmitterExtension(parser, listener)
+		// );
 
 		loader.register((parser) => {
 			return new VRMLoaderPlugin(parser);
@@ -602,6 +454,12 @@ const SavedObject: React.FC<SavedObjectInternalProps> = (props) => {
 			} else {
 				meshesToAdd.push(child);
 			}
+			// emit event to notify that the scene is loaded
+			// after 2 seconds fire the event
+			setTimeout(() => {
+				const event = new Event("mainSceneLoaded");
+				window.dispatchEvent(event);
+			}, 2000);
 		});
 
 		meshesToAdd.forEach((mesh) => {
@@ -617,6 +475,8 @@ const SavedObject: React.FC<SavedObjectInternalProps> = (props) => {
 		setMeshes(meshesScene);
 		setPortals(portalsToAdd);
 		props.setSpawnPoints(spawnPointsToAdd.map(point => [point.position.x, point.position.y, point.position.z]));
+		// @ts-ignore
+		props.setPhysicsEnabled(true);
 		// End OMI_collider logic.
 	}, []);
 
@@ -685,15 +545,52 @@ const SavedObject: React.FC<SavedObjectInternalProps> = (props) => {
 
 export default function EnvironmentFront(props: EnvironmentFrontProps) {
 	const [avatarUrl, setAvatarUrl] = useState<string>(props.userData.playerVRM || defaultAvatarVRM);
+	const [chatSessions, setChatSessions] = useState<Record<string, ChatSession>>({});
+	const [activeChatNPC, setActiveChatNPC] = useState<string | null>(null);
+	const [roomId, setRoomId] = useState<string | undefined>();
+	const [initializing, setInitializing] = useState(true);
+	const [ physicsEnabled, setPhysicsEnabled ] = useState(false);
+	console.log("all the props", props);
+	const initializeChatSession = async (npcName: string, personality: string) => {
+		try {
+			const response = await fetch('https://xr-publisher.sxpdigital.workers.dev/api/character/session', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					author: 'antpb', // or however you want to identify NPC authors
+					name: npcName,
+					personality
+				})
+			});
+
+			const data = await response.json();
+			if (data.error) throw new Error(data.error);
+
+			setChatSessions(prev => ({
+				...prev,
+				[npcName]: {
+					id: data.roomId,
+					npcName,
+					messages: []
+				}
+			}));
+
+			return data.roomId;
+		} catch (error) {
+			console.error('Failed to initialize chat session:', error);
+			return null;
+		}
+	};
+
 	// Memoized handlers for avatar URL updates
 	const handleAvatarChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
 		const newUrl = e.target.value;
 		setAvatarUrl(newUrl);
-		
+
 		// Optional: Validate URL format
 		const isValidUrl = /^(http|https):\/\/[^ "]+$/.test(newUrl) || newUrl === '';
 		if (isValidUrl) {
-		props.userData.playerVRM = newUrl || defaultAvatarVRM;
+			props.userData.playerVRM = newUrl || defaultAvatarVRM;
 		}
 	}, []);
 
@@ -702,31 +599,31 @@ export default function EnvironmentFront(props: EnvironmentFrontProps) {
 		const url = e.dataTransfer.getData('text');
 		setAvatarUrl(url);
 		props.userData.playerVRM = url;
-	  }, []);
-	
+	}, []);
+
 	const [loadedAudios, setLoadedAudios] = useState<any[]>([]);
 	const [allAudiosLoaded, setAllAudiosLoaded] = useState(false);
-  
+
 
 	const [showUI] = useState(true);
 	const [displayName, setDisplayNameImmediate] = useState(props.userData.inWorldName);
 	const [playerAvatar, setPlayerAvatarImmediate] = useState(props.userData.playerVRM || window.defaultAvatar);
-  
-	  // Debounced setters
-	  const setDisplayName = useMemo(
+
+	// Debounced setters
+	const setDisplayName = useMemo(
 		() => debounce((value: string) => {
-		  setDisplayNameImmediate(value);
+			setDisplayNameImmediate(value);
 		}, 150),
 		[]
-	  );
-	
-	  const setPlayerAvatar = useMemo(
+	);
+
+	const setPlayerAvatar = useMemo(
 		() => debounce((value: string) => {
-		  setPlayerAvatarImmediate(value);
+			setPlayerAvatarImmediate(value);
 		}, 150),
 		[]
-	  );
-	
+	);
+
 	// const [mobileControls, setMobileControls] = useState(null);
 	// const [mobileRotControls, setMobileRotControls] = useState(null);
 	const movement = useKeyboardControls();
@@ -736,9 +633,9 @@ export default function EnvironmentFront(props: EnvironmentFrontProps) {
 	const [loaded, setLoaded] = useState(false);
 	//@ts-ignore
 	const [spawnPoints, setSpawnPoints] = useState<SpawnPoint[]>([]);
-	const [messages, setMessages] = useState<string[]>();
+	const [messages, setMessages] = useState<Message[]>([]);
 	const [objectsInRoom, setObjectsInRoom] = useState<string[]>([]);
-	  const [url] = useState(props.threeUrl ? props.threeUrl : (defaultEnvironment));
+	const [url] = useState(props.threeUrl ? props.threeUrl : (defaultEnvironment));
 	const [loadingWorld, setLoadingWorld] = useState(true);
 
 	const canvasRef = useRef<HTMLDivElement>(null);
@@ -753,6 +650,40 @@ export default function EnvironmentFront(props: EnvironmentFrontProps) {
 	// 		textureHeight: 1440
 	// 	}
 	// );
+
+	// useEffect(() => {
+	// 	async function initSession() {
+	// 		if (props.npcsToAdd.length === 0) return;
+
+	// 		const npc = props.npcsToAdd[0];
+	// 		const name = getAttributeSafe(npc, 'name');
+	// 		const personality = getAttributeSafe(npc, 'personality');
+
+	// 		try {
+	// 			const response = await fetch('https://xr-publisher.sxpdigital.workers.dev/api/character/session', {
+	// 				method: 'POST',
+	// 				headers: { 'Content-Type': 'application/json' },
+	// 				body: JSON.stringify({
+	// 					author: 'antpb',
+	// 					name,
+	// 					personality
+	// 				})
+	// 			});
+
+	// 			const data = await response.json();
+	// 			if ('error' in data) throw new Error(data.error);
+
+	// 			setRoomId(data.roomId);
+	// 		} catch (error) {
+	// 			console.error('Failed to initialize chat:', error);
+	// 		} finally {
+	// 			setInitializing(false);
+	// 		}
+	// 	}
+
+	// 	initSession();
+	// }, [props.npcsToAdd]); // Dependency on npcs being added
+
 	useEffect(() => {
 		if (loadedAudios.length === props.audiosToAdd.length && !allAudiosLoaded) {
 			setAllAudiosLoaded(true);
@@ -858,7 +789,7 @@ export default function EnvironmentFront(props: EnvironmentFrontProps) {
 									}
 									<ContextBridgeComponent />
 									<Physics
-										erp={1}
+										paused={!physicsEnabled}
 										// timestep = {1/30}
 										// gravity={[0, -9.8, 0]}
 										// interpolate={false}
@@ -870,6 +801,13 @@ export default function EnvironmentFront(props: EnvironmentFrontProps) {
 										timeStep={"vary"}
 										updateLoop={"follow"}
 										updatePriority={-100}
+										// paused={!physicsEnabled}
+										// debug={true}
+										// timeStep={1/60}
+										// updateLoop="independent"
+										// gravity={[0, -9.81, 0]}
+										// interpolate={true}
+									
 									>
 										<Player
 											spawnPoint={props.spawnPoint}
@@ -909,6 +847,8 @@ export default function EnvironmentFront(props: EnvironmentFrontProps) {
 														animations={props.animations}
 														playerData={props.userData}
 														setSpawnPoints={setSpawnPoints}
+														//@ts-ignore
+														setPhysicsEnabled={setPhysicsEnabled}
 													/>
 													{Object.values(props.sky).map(
 														(item, index) => {
@@ -1132,9 +1072,9 @@ export default function EnvironmentFront(props: EnvironmentFrontProps) {
 																rotationZ={Number(attributes.modelRotationZ)}
 																objectAwareness={attributes.objectAwareness}
 																name={attributes.name}
-																messages={messages}
+																messages={messages.map(message => message.text)}
 																// message={messages}
-																threeObjectPluginRoot={threeObjectPluginRoot}
+																threeObjectPluginRoot={props.threeObjectPluginRoot}
 																defaultFont={defaultFont}
 																defaultMessage={attributes.defaultMessage}
 																personality={attributes.personality}
@@ -1164,7 +1104,7 @@ export default function EnvironmentFront(props: EnvironmentFrontProps) {
 															alt: getAttributeSafe(model, 'alt'),
 															collidable: getAttributeSafe(model, 'collidable'),
 														};
-
+														console.log("atts", attributes);
 														if (!objectsInRoom.includes(attributes.alt)) {
 															setObjectsInRoom([...objectsInRoom, attributes.alt]);
 														}
@@ -1316,9 +1256,8 @@ export default function EnvironmentFront(props: EnvironmentFrontProps) {
 								defaultMessage={attributes.defaultMessage}
 								messages={messages}
 								showUI={showUI}
-								style={{ zIndex: 100 }}
-								nonce={props.userData.nonce}
-								key={index}
+								roomId={roomId}
+								initializing={initializing}
 							/>
 						);
 					})}
@@ -1363,63 +1302,63 @@ export default function EnvironmentFront(props: EnvironmentFrontProps) {
 						<div className="xr-publisher-entry-pfp" style={{ backgroundImage: `url(${props.userData.profileImage})` }}></div>
 						{/* <span>Display Name</span> */}
 						{(props.networkingBlock.length > 0) ? (
-  <>
-    <input 
-      type="text"
-      value={displayName}
-      onChange={(e) => setDisplayName(e.target.value)}
-    />
-    {(props.networkingBlock[0].attributes.customAvatars?.value === "1") && (
-      <div>
-        <span>VRM or Sprite URL</span>
-        <input
-          type="text"
-          value={playerAvatar} // Use value instead of defaultValue for controlled component
-          onChange={(e) => setPlayerAvatar(e.target.value)}
-          onDrop={(e) => {
-            e.preventDefault();
-            setPlayerAvatar(e.dataTransfer.getData('text')); 
-          }}
-          style={{ color: "#000 !important" }}
-        />
-      </div>
-    )}
-    <button
-      className="xr-publisher-load-world-button-secondary"
-      onClick={() => {
-        goToPrivateRoom();
-        canvasRef.current?.scrollIntoView({ behavior: 'smooth' });
-        setLoaded(true);
-      }}
-      style={{ padding: "10px" }}
-    >
-      Join Private
-    </button>
-  </>
-) : (
-  <div>
-    <span>VRM or Sprite URL</span>
-    <input 
-      type="text" 
-      value={playerAvatar}  // Use value instead of defaultValue
-      onChange={(e) => setPlayerAvatar(e.target.value)} 
-    />
-  </div>
-)}
+							<>
+							<input
+									type="text"
+									value={displayName}
+									onChange={(e) => setDisplayName(e.target.value)}
+								/>
+								{(props.networkingBlock[0]?.customAvatars?.value === "1") && (
+									<div>
+										<span>VRM or Sprite URL</span>
+										<input
+											type="text"
+											value={playerAvatar} // Use value instead of defaultValue for controlled component
+											onChange={(e) => setPlayerAvatar(e.target.value)}
+											onDrop={(e) => {
+												e.preventDefault();
+												setPlayerAvatar(e.dataTransfer.getData('text'));
+											}}
+											style={{ color: "#000 !important" }}
+										/>
+									</div>
+								)}
+								<button
+									className="xr-publisher-load-world-button-secondary"
+									onClick={() => {
+										goToPrivateRoom();
+										canvasRef.current?.scrollIntoView({ behavior: 'smooth' });
+										setLoaded(true);
+									}}
+									style={{ padding: "10px" }}
+								>
+									Join Private
+								</button>
+							</>
+						) : (
+							<div>
+								<span>VRM or Sprite URL</span>
+								<input
+									type="text"
+									value={playerAvatar}  // Use value instead of defaultValue
+									onChange={(e) => setPlayerAvatar(e.target.value)}
+								/>
+							</div>
+						)}
 
 					</div>
 					<button
-					className="xr-publisher-load-world-button"
-					onClick={() => {
-						canvasRef.current?.scrollIntoView({ behavior: 'smooth' });
-						setLoaded(true);
-					}}
-					style={{
-						padding: "10px",
-						color: "white"
-					}}
+						className="xr-publisher-load-world-button"
+						onClick={() => {
+							canvasRef.current?.scrollIntoView({ behavior: 'smooth' });
+							setLoaded(true);
+						}}
+						style={{
+							padding: "10px",
+							color: "white"
+						}}
 					>
-					{props.networkingBlock.length > 0 ? "Join Public" : "Load World"}
+						{props.networkingBlock.length > 0 ? "Join Public" : "Load World"}
 					</button>
 					{(props.networkingBlock.length > 0) && (
 						<div className="xr-publisher-entry-flow-instruction">

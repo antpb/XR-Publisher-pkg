@@ -16,11 +16,13 @@ import {
 	DoubleSide,
 	Mesh,
 	CircleGeometry,
-	BoxGeometry
+	BoxGeometry,
+	Euler
 } from "three";
-import { RigidBody } from "@react-three/rapier";
+import { RigidBody, useRapier } from "@react-three/rapier";
 import {
-	useAnimations} from "@react-three/drei";
+	useAnimations
+} from "@react-three/drei";
 import { GLTFAudioEmitterExtension } from "three-omi";
 // import { GLTFGoogleTiltBrushMaterialExtension } from "three-icosa";
 import { VRMUtils, VRMLoaderPlugin } from "@pixiv/three-vrm";
@@ -158,30 +160,54 @@ function loadMixamoAnimation({
  */
 export function ModelObject(model: ModelProps): JSX.Element {
 	const idleFile = useState(idle);
-	const [clicked, setClickEvent] = useState(false);
+	// const [clicked, setClickEvent] = useState(false);
 	const [url, set] = useState(model.url);
 	useEffect(() => {
 		setTimeout(() => set(model.url), 2000);
-	}, []);	
+	}, []);
 
-	const [listener] = useState(() => new AudioListener());
+	// const [listener] = useState(() => new AudioListener());
 	const { clock } = useThree();
-	useThree(({ camera }) => {
-		camera.add(listener);
-	});
+	// useThree(({ camera }) => {
+	// 	camera.add(listener);
+	// });
+
+	const validatePosition = (pos: number): number => {
+		return isFinite(pos) ? pos : 0;
+	};
+	// Sanitize position values
+	const position = {
+		x: validatePosition(model.positionX),
+		y: validatePosition(model.positionY),
+		z: validatePosition(model.positionZ)
+	};
+
+	// Sanitize rotation values 
+	const rotation = {
+		x: validatePosition(model.rotationX),
+		y: validatePosition(model.rotationY),
+		z: validatePosition(model.rotationZ)
+	};
+
+	// Sanitize scale values
+	const scale = {
+		x: validatePosition(model.scaleX),
+		y: validatePosition(model.scaleY),
+		z: validatePosition(model.scaleZ)
+	};
 
 	let gltf;
 
-	try{
+	try {
 		gltf = useLoader(GLTFLoader, url, (loader) => {
 			// const dracoLoader = new DRACOLoader();
 			// dracoLoader.setDecoderPath( model.threeObjectPluginRoot + "/inc/utils/draco/");
 			// dracoLoader.setDecoderConfig({type: 'js'});
 			// loader.setDRACOLoader(dracoLoader);
-	
-			loader.register(
-				(parser) => new GLTFAudioEmitterExtension(parser, listener)
-			);
+
+			// loader.register(
+			// 	(parser) => new GLTFAudioEmitterExtension(parser, listener)
+			// );
 			// if (openbrushEnabled === true) {
 			// 	loader.register(
 			// 		(parser) =>
@@ -194,17 +220,17 @@ export function ModelObject(model: ModelProps): JSX.Element {
 			loader.register((parser) => {
 				return new VRMLoaderPlugin(parser);
 			});
-		});	
+		});
 	} catch (error) {
 		// console.error("Failed to load GLTF file: ", error);
 		// Set gltf to a fallback Three.js object
 		const geometry = new BoxGeometry();
-		const material = new MeshBasicMaterial({color: 0x00ff00});
+		const material = new MeshBasicMaterial({ color: 0x00ff00 });
 		gltf = new Mesh(geometry, material);
 	}
 
 
-	const audioObject = gltf?.scene?.getObjectByProperty('type', 'Audio');
+	// const audioObject = gltf?.scene?.getObjectByProperty('type', 'Audio');
 
 	const { actions } = useAnimations(gltf.animations, gltf.scene);
 	// const animationClips = gltf.animations;
@@ -226,15 +252,15 @@ export function ModelObject(model: ModelProps): JSX.Element {
 	if (String(generator).includes("Tilt Brush")) {
 		return (
 			<primitive
-				rotation={[model.rotationX, model.rotationY, model.rotationZ]}
-				position={[model.positionX, model.positionY, model.positionZ]}
-				scale={[model.scaleX, model.scaleY, model.scaleZ]}
+				position={[position.x, position.y, position.z]}
+				rotation={[rotation.x, rotation.y, rotation.z]}
+				scale={[scale.x, scale.y, scale.z]}
 				object={gltf.scene}
 			/>
 		);
 	}
 
-	if (gltf?.userData?.gltfExtensions?.VRM) {	
+	if (gltf?.userData?.gltfExtensions?.VRM) {
 		const vrm = gltf.userData.vrm;
 		VRMUtils.rotateVRM0(vrm);
 		// Disable frustum culling
@@ -259,30 +285,31 @@ export function ModelObject(model: ModelProps): JSX.Element {
 
 		// retarget the animations from mixamo to the current vrm
 		useEffect(() => {
-		if (currentVrm) {
-			loadMixamoAnimation({
-				url: idleFile[0],
-				vrm: currentVrm,
-				positionX: model.positionX,
-				positionY: model.positionY,
-				positionZ: model.positionZ,
-				scaleX: model.scaleX,
-				scaleY: model.scaleY,
-				scaleZ: model.scaleZ,
-				rotationX: model.rotationX,
-				rotationY: model.rotationY,
-				rotationZ: model.rotationZ,
-				rotationW: 1 // Assuming a default value for rotationW
-			}).then((clip) => {
-				currentMixer.clipAction(clip).play();
-				currentMixer.update(clock.getDelta());
-			});
-		}
+			if (currentVrm) {
+				console.log("should not be loading here but we'll see");
+				loadMixamoAnimation({
+					url: idleFile[0],
+					vrm: currentVrm,
+					positionX: model.positionX,
+					positionY: model.positionY,
+					positionZ: model.positionZ,
+					scaleX: model.scaleX,
+					scaleY: model.scaleY,
+					scaleZ: model.scaleZ,
+					rotationX: model.rotationX,
+					rotationY: model.rotationY,
+					rotationZ: model.rotationZ,
+					rotationW: 1 // Assuming a default value for rotationW
+				}).then((clip) => {
+					currentMixer.clipAction(clip).play();
+					currentMixer.update(clock.getDelta());
+				});
+			}
 		}, []);
 		return (
 			<group
-				position={[model.positionX, model.positionY, model.positionZ]}
-				rotation={[model.rotationX, model.rotationY, model.rotationZ]}
+				position={[position.x, position.y, position.z]}
+				rotation={[rotation.x, rotation.y, rotation.z]}
 			>
 				<primitive object={vrm.scene} />
 			</group>
@@ -329,46 +356,29 @@ export function ModelObject(model: ModelProps): JSX.Element {
 		const circle = new Mesh(geometryCircle, materialCircle);
 		return circle;
 	});
-	if(gltf.scene) {
+
+	const { rapier } = useRapier();
+
+	if (gltf.scene) {
 		if (model.collidable === "1") {
 			return (
-					<RigidBody
-						type="fixed"
-						colliders={audioObject ? "cuboid" : "trimesh"}
-						lockRotations={true}
-						lockTranslations={true}
-						friction={0.8}
-						rotation={[
-							model.rotationX,
-							model.rotationY,
-							model.rotationZ
-						]}
-						position={[
-							Number(model.positionX),
-							Number(model.positionY),
-							Number(model.positionZ)
-						]}
-						scale={[Number(model.scaleX) + 0.01, Number(model.scaleY) + 0.01, Number(model.scaleZ) + 0.01]}
-						onCollisionEnter={() => {
-							// const { manifold, target, other } = event;
-							if (audioObject) {
-								setClickEvent((prevState) => !prevState);
-								if (clicked) {
-									audioObject.play();
-									triangle.material.visible = false;
-									circle.material.visible = false;
-								} else {
-									audioObject.pause();
-									triangle.material.visible = true;
-									circle.material.visible = true;
-								}
-							}
-						}}
-					>
-						<primitive
-							object={gltf.scene}
-						/>
-					</RigidBody>
+				<RigidBody
+					type="fixed"
+					//@ts-ignore
+					activeCollisionTypes={rapier.ActiveCollisionTypes.FIXED_FIXED}
+					colliders={"trimesh"}
+					// lockRotations={true}
+					// lockTranslations={true}
+					// friction={0.8}
+
+				>
+					<primitive
+						position={[position.x, position.y, position.z]}
+						rotation={[rotation.x, rotation.y, rotation.z]}
+						scale={[scale.x, scale.y, scale.z]}
+						object={gltf.scene}
+					/>
+				</RigidBody>
 			);
 		}
 		return (
@@ -377,8 +387,8 @@ export function ModelObject(model: ModelProps): JSX.Element {
 					object={gltf.scene}
 					// castShadow
 					// receiveShadow
-					rotation={[model.rotationX, model.rotationY, model.rotationZ]}
-					position={[model.positionX, model.positionY, model.positionZ]}
+					position={[position.x, position.y, position.z]}
+					rotation={[rotation.x, rotation.y, rotation.z]}
 					scale={[model.scaleX, model.scaleY, model.scaleZ]}
 				/>
 			</>
