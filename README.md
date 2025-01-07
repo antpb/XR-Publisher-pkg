@@ -2,7 +2,7 @@
 
 XR Publisher is a powerful JavaScript library for creating immersive 3D virtual worlds with support for VR, networking, and AI-powered NPCs. Built on top of React and Three.js, it provides a declarative way to build interactive 3D environments.
 
-STILL IN DEVELOPMENT USE AT YOUR OWN RISK OF FREQENT CHANGES
+STILL IN DEVELOPMENT USE AT YOUR OWN RISK OF FREQENT CHANGES - DEVELOPMENT IS ON THE BRANCH "development" wait until there is a release before using in production
 
 ## Features
 
@@ -48,7 +48,7 @@ publisher.init();
 
 ## Building a World
 
-Worlds are constructed using custom HTML web components. Here's a basic example:
+Worlds are constructed using custom HTML web componentsgit. Here's a basic example:
 
 ```html
 <three-environment-block 
