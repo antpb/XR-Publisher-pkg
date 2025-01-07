@@ -17,9 +17,6 @@ STILL IN DEVELOPMENT USE AT YOUR OWN RISK OF FREQENT CHANGES - DEVELOPMENT IS ON
 
 ## Installation
 
-```bash
-npm install xr-publisher
-```
 
 ## Quick Start
 
