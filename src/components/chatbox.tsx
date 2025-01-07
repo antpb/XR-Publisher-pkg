@@ -208,8 +208,6 @@ export default function ChatBox({
 	};
 			  
 	const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-		e.preventDefault();
-		e.stopPropagation();
 		setInput(e.target.value);
 	};
 
@@ -281,7 +279,7 @@ export default function ChatBox({
 								type="text"
 								value={input}
 								onChange={handleChange}
-								placeholder={initializing ? "Initializing chat..." : "Type a message..."}
+								placeholder={initializing ? "Type a message..." : "Type a message..."}
 								// disabled={isLoading || initializing || !roomId}
 								className="flex-1 bg-gray-800 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-600"
 								autoComplete="off"

@@ -36,7 +36,7 @@ import {
 // import idle from "../../../defaults/avatars/friendly.fbx";
 import { getMixamoRig } from "../../../utils/rigMap";
 import type { NPCProps } from "./NPCObject.d";
-
+  
 /**
  * A map from Mixamo rig name to VRM Humanoid bone name
  */
@@ -241,55 +241,7 @@ export function NPCObject(model: NPCProps): JSX.Element {
 
 	const { scene, clock } = useThree();
 
-	useEffect(() => {
-		if (!scene || navMeshCreated.current) return;
 	  
-		const size = 40;
-		const segments = 8;
-		const geometry = new PlaneGeometry(size, size, segments, segments);
-		
-		// Ensure all vertices are at y=0
-		const positions = geometry.attributes.position.array;
-		for (let i = 1; i < positions.length; i += 3) {
-			positions[i] = 0;
-		}
-		geometry.computeVertexNormals();
-		
-		const material = new MeshBasicMaterial({ 
-			visible: true,
-			wireframe: true,
-			color: 0xff0000,
-			side: DoubleSide
-		});
-		
-		const plane = new Mesh(geometry, material);
-		
-		// Position navmesh at ground level
-		const charPos = new Vector3(model.positionX, 0, model.positionZ);
-		plane.position.copy(charPos);
-		plane.rotateX(-Math.PI / 2);
-		
-		console.log("Creating NavMesh:", {
-			vertexCount: geometry.attributes.position.count,
-			center: charPos.toArray(),
-			bounds: {
-				xMin: charPos.x - size/2,
-				xMax: charPos.x + size/2,
-				zMin: charPos.z - size/2,
-				zMax: charPos.z + size/2
-			}
-		});
-		
-		navMesh.current = plane;
-		navMeshCreated.current = true;
-		scene.add(plane);
-	  
-		return () => {
-			scene.remove(plane);
-			navMesh.current = null;
-			navMeshCreated.current = false;
-		};
-	}, [scene, model.positionX, model.positionZ]);		  
 
 	// create plane and assign as navmesh
 	// Inside NPCObject component
@@ -335,6 +287,36 @@ export function NPCObject(model: NPCProps): JSX.Element {
 			return new VRMLoaderPlugin(parser);
 		});
 	});
+
+	useEffect(() => {
+		if (!scene || navMeshCreated.current) return;
+
+		const handleSceneLoaded = () => {
+			console.log("Searching for navmesh...");
+			const navMeshFound = window.scene.getObjectByName("npcNavMesh");
+			console.log("Found navmesh:", navMeshFound);
+
+			if (navMeshFound instanceof Mesh) {
+				// Ensure vertices are at y=0 for pathfinding
+				const positions = navMeshFound.geometry.attributes.position.array;
+				for (let i = 1; i < positions.length; i += 3) {
+					positions[i] = 0;
+				}
+				navMeshFound.geometry.computeVertexNormals();
+
+				navMesh.current = navMeshFound;
+				navMeshCreated.current = true;
+			}
+		};
+
+		window.addEventListener('mainSceneLoaded', handleSceneLoaded);
+
+		return () => {
+			window.removeEventListener('mainSceneLoaded', handleSceneLoaded);
+			navMesh.current = null;
+			navMeshCreated.current = false;
+		};
+	}, [scene]);
 
 	// const audioObject = gltf.scene.getObjectByProperty('type', 'Audio');
 
@@ -479,12 +461,12 @@ export function NPCObject(model: NPCProps): JSX.Element {
 			if (currentVrm && currentMixer) {
 				if (timeSinceLastUpdate >= 1.0) {  // Log every second
 					lastUpdateTime = currentTime;
-					console.log("Movement state:", {
-						isMoving: pathfindingState.current.isMoving,
-						currentPath: pathfindingState.current.currentPath,
-						currentTargetIndex: pathfindingState.current.currentTargetIndex,
-						position: currentVrm.scene.position,
-					});
+					// console.log("Movement state:", {
+					// 	isMoving: pathfindingState.current.isMoving,
+					// 	currentPath: pathfindingState.current.currentPath,
+					// 	currentTargetIndex: pathfindingState.current.currentTargetIndex,
+					// 	position: currentVrm.scene.position,
+					// });
 				}
 
 				// Update text position

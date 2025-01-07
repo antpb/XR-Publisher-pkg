@@ -21,68 +21,65 @@ export function useNPCPathfinding(
         groupId: null as number | null
     });
 
-    // Initialize pathfinding when navMesh is ready
 	useEffect(() => {
 		if (!navMesh || pathfindingState.current.initialized) {
-			console.log("Pathfinder state:", {
-				hasNavMesh: !!navMesh,
-				isInitialized: pathfindingState.current.initialized
-			});
-			return;
+		  return;
 		}
-	
+	  
 		try {
-			console.log("Creating pathfinder");
-			const pathfinder = new Pathfinding();
+		  console.log("Initializing pathfinder with navmesh");
+		  const pathfinder = new Pathfinding();
+		  
+		  // Clone geometry and ensure y=0 for pathfinding
+		  const clonedGeometry = navMesh.geometry.clone();
+		  const positions = clonedGeometry.attributes.position.array;
+		  for (let i = 1; i < positions.length; i += 3) {
+			positions[i] = 0;
+		  }
+		  
+		  const zone = Pathfinding.createZone(clonedGeometry);
+		  console.log("Zone created:", {
+			vertices: zone.vertices.length,
+			groups: zone.groups.length
+		  });
+		  
+		  pathfinder.setZoneData(ZONE_ID, zone);
+		  
+		  // Get initial position aligned with navmesh
+		  const groundPosition = new Vector3(
+			initialPosition.x,
+			0, // Force y=0 for pathfinding
+			initialPosition.z
+		  );
+		  
+		  const groupId = pathfinder.getGroup(ZONE_ID, groundPosition);
+		  
+		  if (typeof groupId === 'number') {
+			pathfindingState.current = {
+			  ...pathfindingState.current,
+			  pathfinder,
+			  groupId,
+			  initialized: true
+			};
 			
-			// Force all Y coordinates to 0 for pathfinding
-			const clonedGeometry = navMesh.geometry.clone();
-			const positions = clonedGeometry.attributes.position.array;
-			for (let i = 1; i < positions.length; i += 3) {
-				positions[i] = 0;
-			}
-			
-			const zone = Pathfinding.createZone(clonedGeometry);
-			console.log("Zone created:", {
-				vertices: zone.vertices.length,
-				groups: zone.groups.length
-			});
-			
-			pathfinder.setZoneData(ZONE_ID, zone);
-			
-			// Get initial position at ground level
-			const groundPosition = new Vector3(
-				initialPosition.x,
-				-1,
-				initialPosition.z
-			);
-			
-			const groupId = pathfinder.getGroup(ZONE_ID, groundPosition);
-			console.log("Found group:", { groupId, position: groundPosition.toArray() });
-			
-			if (typeof groupId === 'number') {
-				pathfindingState.current.pathfinder = pathfinder;
-				pathfindingState.current.groupId = groupId;
-				pathfindingState.current.initialized = true;
-				
-				console.log("Pathfinder initialized, generating path");
-				generateRandomPath();
-			} else {
-				console.error("Failed to get valid group ID");
-			}
+			console.log("Pathfinder initialized successfully");
+			generateRandomPath();
+		  } else {
+			console.error("Failed to get valid group ID for position:", groundPosition);
+		  }
 		} catch (error) {
-			console.error("Pathfinding initialization error:", error);
+		  console.error("Pathfinding initialization error:", error);
 		}
-	}, [navMesh]);	
+	  }, [navMesh]);	  
 
 	const generateRandomPath = () => {
 		const { pathfinder, groupId } = pathfindingState.current;
 		if (!pathfinder || groupId === null || !navMesh) {
-			console.log("Cannot generate path:", {
-				hasPathfinder: !!pathfinder,
-				groupId,
-				hasNavMesh: !!navMesh
-			});
+			// console.log("Cannot generate path:", {
+			// 	hasPathfinder: !!pathfinder,
+			// 	groupId,
+			// 	hasNavMesh: !!navMesh
+			// });
 			return;
 		}
 	
@@ -130,18 +127,18 @@ export function useNPCPathfinding(
 		const state = pathfindingState.current;
 	
 		// More detailed movement debug
-		console.log("Movement update:", {
-			isMoving: state.isMoving,
-			hasPath: state.currentPath.length > 0,
-			pathLength: state.currentPath.length,
-			currentIndex: state.currentTargetIndex,
-			currentTarget: state.currentPath[state.currentTargetIndex]?.toArray(),
-			currentPosition: vrmScene.position.toArray()
-		});
+		// console.log("Movement update:", {
+		// 	isMoving: state.isMoving,
+		// 	hasPath: state.currentPath.length > 0,
+		// 	pathLength: state.currentPath.length,
+		// 	currentIndex: state.currentTargetIndex,
+		// 	currentTarget: state.currentPath[state.currentTargetIndex]?.toArray(),
+		// 	currentPosition: vrmScene.position.toArray()
+		// });
 	
 		if (!state.isMoving || state.currentPath.length === 0) {
 			handleAnimation(false, delta, animations);
-			console.log("No movement: generating new path");
+			// console.log("No movement: generating new path");
 			generateRandomPath();
 			return;
 		}
@@ -150,11 +147,11 @@ export function useNPCPathfinding(
 		const currentPosition = new Vector3().copy(vrmScene.position);
 		const distanceToTarget = currentPosition.distanceTo(currentTarget);
 	
-		console.log("Movement step:", {
-			distanceToTarget,
-			targetPos: currentTarget.toArray(),
-			currentPos: currentPosition.toArray()
-		});
+		// console.log("Movement step:", {
+		// 	distanceToTarget,
+		// 	targetPos: currentTarget.toArray(),
+		// 	currentPos: currentPosition.toArray()
+		// });
 	
 		// Move to next point if close enough
 		if (distanceToTarget < 0.1) {

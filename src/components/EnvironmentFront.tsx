@@ -454,6 +454,12 @@ const SavedObject: React.FC<SavedObjectInternalProps> = (props) => {
 			} else {
 				meshesToAdd.push(child);
 			}
+			// emit event to notify that the scene is loaded
+			// after 2 seconds fire the event
+			setTimeout(() => {
+				const event = new Event("mainSceneLoaded");
+				window.dispatchEvent(event);
+			}, 2000);
 		});
 
 		meshesToAdd.forEach((mesh) => {
