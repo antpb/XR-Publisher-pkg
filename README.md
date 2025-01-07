@@ -48,7 +48,7 @@ publisher.init();
 
 ## Building a World
 
-Worlds are constructed using custom HTML elements. Here's a basic example:
+Worlds are constructed using custom HTML web components. Here's a basic example:
 
 ```html
 <three-environment-block 
@@ -173,6 +173,8 @@ Players can customize their appearance using VRM models:
 
 ### AI NPCs
 NPCs can be configured with personality traits and conversation topics:
+## @todo HIGH RISK TO CHANGE SOON: update to offer the ability to point to the new Character API to create NPCs
+
 ```javascript
 const npcConfig = {
     name: "Character",
@@ -192,6 +194,7 @@ For multiplayer environments:
 2. Set participant limits
 3. Configure voice chat settings
 4. Handle player synchronization automatically
+(TODO: need to write up the p2pcf setup or offer the public one)
 
 ## Browser Support
 
@@ -199,18 +202,12 @@ For multiplayer environments:
 - WebXR-compatible browsers for VR features
 - Mobile support with touch controls
 
-## Contributing
-
-Contributions are welcome! Please read our contributing guidelines and submit pull requests to our repository.
 
 ## License
-
-[Add your license information here]
+GPL-3.0
 
 ## Support
 
 For questions and support:
 - File an issue on GitHub
-- Contact our support team
-- Check our documentation
 
