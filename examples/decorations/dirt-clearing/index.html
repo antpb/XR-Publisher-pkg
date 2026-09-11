@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<!--
+  DECORATION EXAMPLE — Dirt clearing ("dirt-surrounded")
+  ------------------------------------------------------
+  `groundPatch: { radius, color?, clearGrass? }` paints a soft circle of
+  dirt onto the terrain around each spawn and clears engine grass out of it —
+  so a campfire reads as a deliberate clearing, not an object dropped into
+  the grass. Works on BOTH renderers (try ?renderer=webgl).
+
+   - radius     : clearing radius in world units.
+   - color      : dirt RGB [r,g,b] 0..1 (defaults to a neutral brown).
+   - clearGrass : remove grass inside the circle (default true). Set false to
+                  paint dirt but keep grass.
+
+  Other decorations whose centre lands inside a patch are skipped, so a
+  campfire never has a flower growing through it.
+
+  Run: npm run dev → /decorations/dirt-clearing/
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Decoration · Dirt clearing</title>
+  <style>
+    body { margin: 0; background: #191919; color: #fff; font-family: sans-serif; }
+    #world-view { width: 100vw; height: 100vh; }
+    #caption { position: fixed; top: 12px; left: 12px; max-width: 380px; padding: 10px 14px;
+      background: rgba(0,0,0,0.6); border-radius: 8px; font-size: 13px; line-height: 1.4; z-index: 10; }
+    #caption b { color: #9fe870; }
+  </style>
+</head>
+<body>
+  <div id="caption">
+    <b>Dirt clearing</b><br>
+    Campfires <i>(groundPatch)</i> paint a dirt circle and clear grass out of
+    it. Roam to find one. Add <code>?renderer=webgl</code> — the patch
+    matches on both renderers.
+  </div>
+  <div id="world-view">
+    <three-environment-block devicetarget="vr" scale="1" positiony="-1" camcollisions="1">
+      <three-terrain-block width="100" height="100" segments="100" scale="0.5" heightscale="45"
+        seed="ex-camp" color="#4a7c59" roughness="0.8" metalness="0.2"
+        noiseoctaves="6" noisepersistence="0.5" noiselacunarity="2"
+        skycolor="#87CEEB" horizoncolor="#E0F7FF" timeofday="12" timecycleduration="0"
+        positionx="0" positiony="-10" positionz="0"></three-terrain-block>
+    </three-environment-block>
+  </div>
+
+  <script src="/index_files/xr-publisher.umd.js"></script>
+  <script>
+    const { XRPublisher, THREE } = window;
+
+    // Shared materials — created once, reused by every campfire.
+    const logMat = new THREE.MeshStandardMaterial({ color: 0x4a3526, roughness: 0.9 });
+    const stoneMat = new THREE.MeshStandardMaterial({ color: 0x6f6a63, roughness: 1 });
+    const emberMat = new THREE.MeshStandardMaterial({ color: 0xff5a1f, emissive: 0xff3300, emissiveIntensity: 1.4 });
+    const charMat = new THREE.MeshStandardMaterial({ color: 0x161310, roughness: 1 });
+
+    XRPublisher.registerDecoration({
+      name: 'campfire',
+      density: 0.8,
+      surface: 'grass',          // build them ON grass…
+      maxSlope: 0.2,
+      minSpacing: 30,
+      collision: true,
+      // The headline: a dirt clearing painted on the terrain around the fire,
+      // grass cleared out of it — so the campfire reads as a deliberate camp.
+      groundPatch: {
+        radius: 5,
+        color: [0.30, 0.21, 0.13],
+        clearGrass: true,
+      },
+      create(spawn) {
+        const fire = new THREE.Group();
+
+        // Ring of fieldstones sitting on the dirt — sells the "made spot".
+        const stones = 8 + Math.floor(spawn.rng() * 3);
+        const ringR = 0.85;
+        for (let i = 0; i < stones; i++) {
+          const s = new THREE.Mesh(new THREE.DodecahedronGeometry(0.18 + spawn.rng() * 0.12), stoneMat);
+          const a = (i / stones) * Math.PI * 2 + spawn.rng() * 0.2;
+          s.position.set(Math.cos(a) * ringR, 0.06, Math.sin(a) * ringR);
+          s.rotation.set(spawn.rng() * 3, spawn.rng() * 3, spawn.rng() * 3);
+          s.scale.y = 0.7 + spawn.rng() * 0.4;       // squashed, half-buried
+          s.castShadow = true;
+          fire.add(s);
+        }
+
+        // Charred ground disc inside the ring.
+        const char = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 0.04, 16), charMat);
+        char.position.y = 0.02;
+        fire.add(char);
+
+        // Teepee of logs leaning inward.
+        const logs = 4 + Math.floor(spawn.rng() * 2);
+        for (let i = 0; i < logs; i++) {
+          const log = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.1, 1.1, 6), logMat);
+          const a = (i / logs) * Math.PI * 2 + spawn.rng() * 0.3;
+          log.position.set(Math.cos(a) * 0.28, 0.45, Math.sin(a) * 0.28);
+          log.rotation.set(0, -a, 0.45);             // lean the top toward centre
+          log.castShadow = true;
+          fire.add(log);
+        }
+
+        // Glowing ember mound at the base.
+        const embers = new THREE.Mesh(new THREE.IcosahedronGeometry(0.28, 0), emberMat);
+        embers.position.y = 0.18;
+        fire.add(embers);
+
+        fire.rotation.y = spawn.rng() * Math.PI * 2;
+        return fire;
+      },
+    });
+  </script>
+</body>
+</html>

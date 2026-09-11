@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<!--
+  Rideable vehicles demo.
+
+  Walk up to a vehicle and press E to ride; press E again to get off.
+  Drive with WASD (Space/Shift = up/down on flying types). The coaster is
+  on-rails and auto-drives along its `waypoints` curve.
+
+  Vehicle bodies here reuse a generic test GLB — swap `threeobjecturl` for
+  your own car/plane/animal models. Driving is networked: open this page in
+  two windows (same room) and you'll see the vehicle move for the other.
+
+  Run with `npm run dev` and open /rideable.html (dev server roots at examples/).
+-->
+<html lang="en">
+<head>
+	<script>
+		// Dev harness only: point the runtime at the deployment API. The
+		// package itself ships with no baked-in host (published worlds
+		// resolve their own origin).
+		window.XRP_API_BASE = "https://xr-publisher.sxpdigital.workers.dev";
+	</script>
+
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>XR Publisher — rideable vehicles demo</title>
+  <style>
+    body { margin: 0; background-color: #191919; color: white; font-family: sans-serif; }
+    #world-view { width: 100vw; height: 100vh; }
+    #hint { position: fixed; top: 12px; left: 12px; z-index: 9999; background: rgba(0,0,0,.6);
+            padding: 8px 12px; border-radius: 8px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div id="hint">Walk to a vehicle and press <b>E</b> to ride · WASD to drive · <b>E</b> to dismount · open a 2nd window (uncomment networking) to ride along as a passenger</div>
+  <div id="world-view">
+    <three-environment-block devicetarget="vr" threeobjecturl="" scale="1" positiony="-1" rotationy="0" animations="" camcollisions="1">
+      <three-terrain-block width="100" height="100" segments="100" scale="0.5" heightscale="50"
+        seed="rideable-demo-seed" color="#4a7c59" roughness="0.8" metalness="0.2"
+        noiseoctaves="6" noisepersistence="0.5" noiselacunarity="2"
+        skycolor="#87CEEB" horizoncolor="#E0F7FF" timeofday="12" timecycleduration="0"
+        positionx="0" positiony="-10" positionz="0"></three-terrain-block>
+
+      <!-- Optional multiplayer: uncomment to test networked driving across two windows.
+      <three-networking-block participantlimit="8" customavatars="1"></three-networking-block>
+      -->
+
+      <!-- Ground car — settles onto the terrain near the spawn. `seats` makes it
+           a 2-seater: index 0 = driver, index 1 = passenger (side by side). Each
+           is an [x,y,z] offset from the auto seat (x = side, y = up, z = fwd).
+           First to press E drives; the next rides along in the free seat. -->
+      <three-rideable-block
+        threeobjecturl="https://items.sxp.digital/f8886983-a11b-4367-a19c-388662542d84/car222t.glb"
+        vehicletype="car" name="Roadster"
+        positionx="4" positiony="0" positionz="2"
+        speed="1"
+        seats='[[0.35,0,0],[-0.35,0,0]]'></three-rideable-block>
+
+      <!-- Motorcycle — two-wheeler that LEANS into turns + steers the front wheel
+           slightly (realistic feel; lean networks to passengers/bystanders). Seats
+           are fore/aft (z): driver in front, one passenger behind. Bikes cap at a
+           driver + 1 passenger even if more seats are authored. Swap the model URL
+           for a real motorcycle whose wheels are named xrp_wheel_01 (front) and
+           xrp_wheel_02 (rear) to get the spinning/steering wheel visuals. -->
+      <three-rideable-block
+        threeobjecturl="https://items.sxp.digital/f8886983-a11b-4367-a19c-388662542d84/car222t.glb"
+        vehicletype="bike" name="Roadster Bike"
+        positionx="9" positiony="0" positionz="2"
+        speed="1"
+        seats='[[0,0,0.25],[0,0,-0.55]]'></three-rideable-block>
+
+      <!-- Flying craft -->
+      <three-rideable-block
+        threeobjecturl="https://items.sxp.digital/f8886983-a11b-4367-a19c-388662542d84/generatedtextured1781301990123.glb"
+        vehicletype="flying" name="Skiff"
+        positionx="-4" positiony="4" positionz="2"
+        speed="1"></three-rideable-block>
+
+      <!-- Hovercraft — floats above the terrain -->
+      <three-rideable-block
+        threeobjecturl="https://items.sxp.digital/f8886983-a11b-4367-a19c-388662542d84/generatedtextured1781301990123.glb"
+        vehicletype="hovering" name="Glider"
+        positionx="0" positiony="0" positionz="8"
+        speed="1"></three-rideable-block>
+
+      <!-- Boat — floats on the water surface (find a basin/low area). If the
+           model has propeller nodes named xrp_propeller_01, xrp_propeller_02, …
+           (any count), they spin with speed while someone's aboard. -->
+      <three-rideable-block
+        threeobjecturl="https://items.sxp.digital/f8886983-a11b-4367-a19c-388662542d84/boat.glb"
+        vehicletype="boat" name="Dinghy"
+        positionx="6" positiony="0" positionz="14"
+        speed="1"></three-rideable-block>
+
+
+      <!-- On-rails coaster: auto-drives the waypoint loop -->
+      <three-rideable-block
+        threeobjecturl="https://items.sxp.digital/f8886983-a11b-4367-a19c-388662542d84/generatedtextured1781301990123.glb"
+        vehicletype="coaster" name="Cyclone"
+        speed="1.2"
+        waypoints='[[0,2,-10],[18,6,2],[6,2,18],[-14,9,6],[-10,2,-12],[0,2,-10]]'></three-rideable-block>
+    </three-environment-block>
+  </div>
+
+  <script src="/index_files/xr-publisher.umd.js"></script>
+</body>
+</html>

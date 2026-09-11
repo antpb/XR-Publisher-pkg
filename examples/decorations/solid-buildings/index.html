@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<!--
+  DECORATION EXAMPLE — Solid buildings
+  ------------------------------------
+  `collision` makes spawns solid (walk into them, stand on them):
+    true | 'cuboid'  → one box collider per mesh (cheap — right for buildings)
+    'hull'           → convex hull
+    'trimesh'        → exact shape (cooks synchronously at mount — use sparingly)
+  Colliders obey the engine's altitude/flying gate automatically.
+
+  Combine with placement filters (`maxSlope`, `minWaterDistance`, `biomes`)
+  and the per-spawn context (`spawn.slope`, `spawn.treeDistance`, …) to steer
+  structures onto the flat dry clearings the terrain generates. Return null
+  from create() to skip a spawn that fails a per-spawn check.
+
+  Run: npm run dev → /decorations/solid-buildings/
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Decoration · Solid buildings</title>
+  <style>
+    body { margin: 0; background: #191919; color: #fff; font-family: sans-serif; }
+    #world-view { width: 100vw; height: 100vh; }
+    #caption { position: fixed; top: 12px; left: 12px; max-width: 380px; padding: 10px 14px;
+      background: rgba(0,0,0,0.6); border-radius: 8px; font-size: 13px; line-height: 1.4; z-index: 10; }
+    #caption b { color: #9fe870; }
+  </style>
+</head>
+<body>
+  <div id="caption">
+    <b>Solid buildings</b><br>
+    Huts with <code>collision:true</code> — walk into them, stand on the
+    roof. Filtered onto flat, dry ground via <code>maxSlope</code> +
+    <code>minWaterDistance</code>, and skipped near tree trunks.
+  </div>
+  <div id="world-view">
+    <three-environment-block devicetarget="vr" scale="1" positiony="-1" camcollisions="1">
+      <three-terrain-block width="100" height="100" segments="100" scale="0.5" heightscale="45"
+        seed="ex-village" color="#4a7c59" roughness="0.8" metalness="0.2"
+        noiseoctaves="6" noisepersistence="0.5" noiselacunarity="2"
+        skycolor="#87CEEB" horizoncolor="#E0F7FF" timeofday="12" timecycleduration="0"
+        positionx="0" positiony="-10" positionz="0"></three-terrain-block>
+    </three-environment-block>
+  </div>
+
+  <script src="/index_files/xr-publisher.umd.js"></script>
+  <script>
+    const { XRPublisher, THREE } = window;
+
+    const wallMat = new THREE.MeshStandardMaterial({ color: 0x9a8a72, roughness: 0.9 });
+    const roofMat = new THREE.MeshStandardMaterial({ color: 0x6e4a35, roughness: 0.85 });
+
+    XRPublisher.registerDecoration({
+      name: 'settler-hut',
+      density: 0.6,
+      minSpacing: 35,
+      maxSlope: 0.12,            // flat ground only
+      minWaterDistance: 10,      // dry footing
+      // biomes: ['buildable'],  // optionally hard-restrict to town-land
+      collision: true,           // ← solid cuboid colliders
+      create(spawn) {
+        if (spawn.treeDistance < 5) return null;   // don't clip a trunk → skip
+        const hut = new THREE.Group();
+        const w = 3.5 + spawn.rng() * 1.5;
+        const d = 3.0 + spawn.rng() * 1.5;
+        const h = 2.4 + spawn.rng() * 0.6;
+        const walls = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
+        walls.position.y = h / 2;
+        walls.castShadow = true; walls.receiveShadow = true;
+        hut.add(walls);
+        const roof = new THREE.Mesh(new THREE.ConeGeometry(Math.max(w, d) * 0.78, h * 0.7, 4), roofMat);
+        roof.position.y = h + h * 0.35;
+        roof.rotation.y = Math.PI / 4;
+        roof.castShadow = true;
+        hut.add(roof);
+        hut.rotation.y = spawn.rng() * Math.PI * 2;
+        return hut;
+      },
+    });
+  </script>
+</body>
+</html>

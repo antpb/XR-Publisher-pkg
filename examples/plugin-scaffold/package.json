@@ -1,0 +1,20 @@
+{
+  "name": "xr-publisher-plugin",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A plugin for XR Publisher worlds — scaffolded from plugin-scaffold.",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch",
+    "dev": "node build.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "devDependencies": {
+    "@types/three": "^0.180.0",
+    "esbuild": "^0.24.0",
+    "three": "^0.180.0",
+    "typescript": "^5.6.0"
+  }
+}

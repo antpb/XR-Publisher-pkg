@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<!--
+  DECORATION EXAMPLE — Grass near the water
+  -----------------------------------------
+  Combine `surface:'grass'` with `maxWaterDistance:` to place things only in
+  the grassy band that hugs a shoreline. `spawn.waterDistance` is a ring-scan
+  out to 24u; `maxWaterDistance` rejects spawns farther than that from water.
+  (`minWaterDistance` is the opposite — keep things AWAY from water.)
+
+  Roam to a lake/coast: reeds ring the shore and stop a few metres inland.
+
+  Run: npm run dev → /decorations/grass-near-water/
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Decoration · Grass near water</title>
+  <style>
+    body { margin: 0; background: #191919; color: #fff; font-family: sans-serif; }
+    #world-view { width: 100vw; height: 100vh; }
+    #caption { position: fixed; top: 12px; left: 12px; max-width: 360px; padding: 10px 14px;
+      background: rgba(0,0,0,0.6); border-radius: 8px; font-size: 13px; line-height: 1.4; z-index: 10; }
+    #caption b { color: #9fe870; }
+  </style>
+</head>
+<body>
+  <div id="caption">
+    <b>Grass near the water</b><br>
+    Reeds spawn only on grass within 8u of water. Roam to a lake or coast —
+    they form a band along the shoreline and vanish inland.
+  </div>
+  <div id="world-view">
+    <three-environment-block devicetarget="vr" scale="1" positiony="-1" camcollisions="1">
+      <three-terrain-block width="100" height="100" segments="100" scale="0.5" heightscale="45"
+        seed="ex-shoreline" color="#4a7c59" roughness="0.8" metalness="0.2"
+        noiseoctaves="6" noisepersistence="0.5" noiselacunarity="2"
+        skycolor="#87CEEB" horizoncolor="#E0F7FF" timeofday="12" timecycleduration="0"
+        positionx="0" positiony="-10" positionz="0"></three-terrain-block>
+    </three-environment-block>
+  </div>
+
+  <script src="/index_files/xr-publisher.umd.js"></script>
+  <script>
+    const { XRPublisher, THREE } = window;
+
+    const reedMat = new THREE.MeshStandardMaterial({ color: 0x5b7a3a, roughness: 1 });
+
+    XRPublisher.registerDecoration({
+      name: 'shoreline-reeds',
+      density: 5,
+      surface: 'grass',          // grassy ground only…
+      maxWaterDistance: 8,       // …and within 8u of a water edge
+      minSpacing: 1.5,
+      create(spawn) {
+        const clump = new THREE.Group();
+        const n = 4 + Math.floor(spawn.rng() * 4);
+        for (let i = 0; i < n; i++) {
+          const h = 0.9 + spawn.rng() * 1.1;
+          const blade = new THREE.Mesh(new THREE.ConeGeometry(0.04, h, 4), reedMat);
+          blade.position.set((spawn.rng() - 0.5) * 0.7, h / 2, (spawn.rng() - 0.5) * 0.7);
+          blade.rotation.set((spawn.rng() - 0.5) * 0.35, spawn.rng() * Math.PI, (spawn.rng() - 0.5) * 0.35);
+          clump.add(blade);
+        }
+        return clump;
+      },
+    });
+  </script>
+</body>
+</html>

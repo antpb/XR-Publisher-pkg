@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<!--
+  DECORATION EXAMPLE — Dynamic + interactive (in-world dialog)
+  -----------------------------------------------------------
+  Two systems together:
+    • update(object, delta, elapsed) → DYNAMIC: ticked once per frame (per-orb
+      phase from spawn.rng, so motion is stable across visits).
+    • interactable + onInteract + XRPublisher.openDialog() → walk up, press E,
+      an IN-WORLD modal opens (title + content + action buttons). It's a 3D
+      panel, not a DOM overlay, so VR controllers can click it too. Buttons
+      close the dialog unless `keepOpen`; opening a dialog from a button chains
+      them — the basis for narrative beats, quizzes, shops, confirmations.
+
+  Note: a throwing update() is disarmed (not retried every frame). Dynamic
+  specs can't be `instanced` (instancing is for static geometry).
+
+  Run: npm run dev → /decorations/dynamic-animated/
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Decoration · Dynamic</title>
+  <style>
+    body { margin: 0; background: #191919; color: #fff; font-family: sans-serif; }
+    #world-view { width: 100vw; height: 100vh; }
+    #caption { position: fixed; top: 12px; left: 12px; max-width: 360px; padding: 10px 14px;
+      background: rgba(0,0,0,0.6); border-radius: 8px; font-size: 13px; line-height: 1.4; z-index: 10; }
+    #caption b { color: #9fe870; }
+  </style>
+</head>
+<body>
+  <div id="caption">
+    <b>Dynamic + interactive</b><br>
+    Floating orbs bob/spin via <code>update()</code>, and each is
+    <code>interactable</code>. Walk up, press <b>E</b> — an in-world modal
+    opens with choices (works in VR too). "Absorb" dims that orb; "Ask its
+    name" chains a follow-up dialog.
+  </div>
+  <div id="world-view">
+    <three-environment-block devicetarget="vr" scale="1" positiony="-1" camcollisions="1">
+      <three-terrain-block width="100" height="100" segments="100" scale="0.5" heightscale="50"
+        seed="ex-dynamic" color="#4a7c59" roughness="0.8" metalness="0.2"
+        noiseoctaves="6" noisepersistence="0.5" noiselacunarity="2"
+        skycolor="#87CEEB" horizoncolor="#E0F7FF" timeofday="12" timecycleduration="0"
+        positionx="0" positiony="-10" positionz="0"></three-terrain-block>
+    </three-environment-block>
+  </div>
+
+  <script src="/index_files/xr-publisher.umd.js"></script>
+  <script>
+    const { XRPublisher, THREE } = window;
+
+    const orbMat = new THREE.MeshStandardMaterial({
+      color: 0x7fd4ff, emissive: 0x1a4a66, emissiveIntensity: 0.8, roughness: 0.2, metalness: 0.1,
+    });
+    const orbDimMat = new THREE.MeshStandardMaterial({
+      color: 0x39414a, emissive: 0x000000, roughness: 0.6, metalness: 0.1,
+    });
+
+    XRPublisher.registerDecoration({
+      name: 'floating-orb',
+      density: 2,
+      minSpacing: 14,
+      interactable: true,                 // ← "E to interact"
+      interactionPrompt: 'examine orb',
+      interactionRadius: 4,
+      create(spawn) {
+        const orb = new THREE.Mesh(new THREE.IcosahedronGeometry(0.5, 1), orbMat);
+        orb.position.y += 1.8;                          // hover above the ground
+        orb.userData.phase = spawn.rng() * Math.PI * 2; // stable per-visit
+        orb.userData.baseY = orb.position.y;
+        orb.userData.spin = 0.4 + spawn.rng() * 0.6;
+        return orb;
+      },
+      update(orb, _delta, elapsed) {
+        const u = orb.userData;
+        orb.rotation.y = elapsed * u.spin + u.phase;
+        orb.position.y = u.baseY + Math.sin(elapsed * 1.2 + u.phase) * 0.3;
+      },
+      // E opens an in-world modal. ctx.object is THIS orb. A button closes the
+      // dialog unless keepOpen; opening a dialog from onSelect chains them.
+      onInteract({ object }) {
+        XRPublisher.openDialog({
+          title: 'A glowing orb',
+          content: 'It pulses with a cool light and seems to respond to you. What do you do?',
+          buttons: [
+            { label: 'Absorb its light', variant: 'primary', onSelect: () => { object.material = orbDimMat; } },
+            {
+              label: 'Ask its name',
+              keepOpen: true,
+              onSelect: () => XRPublisher.openDialog({
+                title: 'The orb hums',
+                content: '"…names are for those who forget. You will not."',
+                buttons: [{ label: 'Step back', variant: 'primary' }],
+              }),
+            },
+            { label: 'Leave it' },
+          ],
+        });
+      },
+    });
+  </script>
+</body>
+</html>

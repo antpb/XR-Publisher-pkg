@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<!--
+  Plugin decorations demo.
+
+  Shows the two decoration flavors a plugin can register through
+  `XRPublisher.registerDecoration` (see src/decorations/decorationRegistry.ts):
+
+   1. "standing-stones" — STATIC + GENERATIVE: a small ring of stones whose
+      count/size/lean are derived from spawn.rng, so every ring is unique
+      but identical on every visit (and every device — placement comes from
+      the world seed).
+   2. "drift-crystal"  — DYNAMIC: a floating crystal with an `update` hook
+      that bobs and spins every frame.
+   3. "settler-hut"    — SOLID + FLAT-TARGETED: `collision: true` gives it
+      auto cuboid colliders (walk into it, stand on it), and the
+      maxSlope / minWaterDistance / treeDistance context steers it onto
+      the flat dry clearings the terrain generates for exactly this.
+
+  …plus the extended placement/render features:
+
+   4. "shoreline-reeds" — SURFACE + NEAR-WATER: surface:'grass' +
+      maxWaterDistance forms a band hugging the shoreline.
+   5. "path-pebbles"    — SURFACE + INSTANCED: surface:'dirt' targets the
+      flat town-land; `instanced:true` renders all of them as one
+      InstancedMesh (cheap at high density).
+   6. "lake-fish"       — IN-WATER: surface:'water' lets it spawn below the
+      waterline; it bobs under the surface using spawn.waterLevel.
+   7. "canopy-lantern"  — ON-TREE: anchor:'tree' places it in the canopy of
+      engine trees.
+   8. "summit-totem"    — ON-MOUNTAIN: anchor:'mountain' places it on
+      mountain peaks (once per peak).
+   9. "campfire"        — DIRT-SURROUNDED: groundPatch paints a dirt circle
+      on the terrain and clears grass out of it.
+
+  Run with `npm run dev` and open /custom-decorations.html
+  (the dev server roots at examples/). Add ?renderer=webgl to test the
+  WebGL twin (placement + dirt patches match WebGPU).
+-->
+<html lang="en">
+<head>
+	<script>
+		// Dev harness only: point the runtime at the deployment API. The
+		// package itself ships with no baked-in host (published worlds
+		// resolve their own origin).
+		window.XRP_API_BASE = "https://xr-publisher.sxpdigital.workers.dev";
+	</script>
+
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>XR Publisher — custom decorations demo</title>
+  <style>
+    body { margin: 0; background-color: #191919; color: white; font-family: sans-serif; }
+    #world-view { width: 100vw; height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="world-view">
+    <three-environment-block devicetarget="vr" threeobjecturl="" scale="1" positiony="-1" rotationy="0" animations="" camcollisions="1">
+      <three-terrain-block width="100" height="100" segments="100" scale="0.5" heightscale="50" seed="decoration-demo-seed" color="#4a7c59" roughness="0.8" metalness="0.2" noiseoctaves="6" noisepersistence="0.5" noiselacunarity="2" skycolor="#87CEEB" horizoncolor="#E0F7FF" timeofday="12" timecycleduration="0" positionx="0" positiony="-10" positionz="0" rotationx="0" rotationy="0" rotationz="0"></three-terrain-block>
+    </three-environment-block>
+  </div>
+
+  <script src="/index_files/xr-publisher.umd.js"></script>
+  <script>
+    // Registration can happen any time — before world init (script order
+    // here) or after (live chunks re-scatter). THREE is the runtime's
+    // bundled copy, exposed for plugins; never ship your own three.
+    const { XRPublisher, THREE } = window;
+
+    /* 1. Static + generative: standing-stone rings. One shared material —
+     *    the engine's default cleanup disposes geometries only, so shared
+     *    materials are the right pattern. */
+    const stoneMaterial = new THREE.MeshStandardMaterial({ color: 0x6e6a63, roughness: 0.95 });
+
+    XRPublisher.registerDecoration({
+      name: 'standing-stones',
+      density: 0.5,        // ~one ring every other chunk
+      minSpacing: 30,
+      minHeight: 0.50,     // keep off beaches
+      maxHeight: 0.58,
+      create(spawn) {
+        const group = new THREE.Group();
+        const stoneCount = 4 + Math.floor(spawn.rng() * 4);   // 4-7 stones
+        const ringRadius = 2.5 + spawn.rng() * 2.0;
+        for (let i = 0; i < stoneCount; i++) {
+          const h = 1.2 + spawn.rng() * 1.6;
+          const stone = new THREE.Mesh(new THREE.BoxGeometry(0.5 + spawn.rng() * 0.3, h, 0.35), stoneMaterial);
+          const a = (i / stoneCount) * Math.PI * 2 + spawn.rng() * 0.3;
+          stone.position.set(Math.cos(a) * ringRadius, h * 0.38, Math.sin(a) * ringRadius);
+          stone.rotation.set((spawn.rng() - 0.5) * 0.25, spawn.rng() * Math.PI, (spawn.rng() - 0.5) * 0.25);
+          stone.castShadow = true;
+          group.add(stone);
+        }
+        return group;        // engine applies the terrain position
+      },
+    });
+
+    /* 2. Dynamic: drifting crystals with a per-frame update hook. */
+    const crystalMaterial = new THREE.MeshStandardMaterial({
+      color: 0x7fd4ff, emissive: 0x1a4a66, roughness: 0.2, metalness: 0.1,
+    });
+
+    XRPublisher.registerDecoration({
+      name: 'drift-crystal',
+      density: 1.5,
+      minSpacing: 12,
+      create(spawn) {
+        const crystal = new THREE.Mesh(new THREE.OctahedronGeometry(0.5 + spawn.rng() * 0.4), crystalMaterial);
+        crystal.position.y += 1.6;                       // float above the spawn point
+        crystal.userData.phase = spawn.rng() * Math.PI * 2;  // stable per-visit phase
+        crystal.userData.baseY = crystal.position.y;
+        return crystal;
+      },
+      update(crystal, _delta, elapsed) {
+        crystal.rotation.y = elapsed * 0.6 + crystal.userData.phase;
+        crystal.position.y = crystal.userData.baseY + Math.sin(elapsed * 1.2 + crystal.userData.phase) * 0.25;
+      },
+    });
+
+    /* 3. Solid building on flat dry ground. collision: true = one cuboid
+     *    collider per mesh (cheap, perfect for buildings); colliders obey
+     *    the engine's altitude gate automatically. spawn context
+     *    (slope/waterDistance/treeDistance/biome) is also available inside
+     *    create() for per-spawn decisions beyond the spec filters. */
+    const wallMaterial = new THREE.MeshStandardMaterial({ color: 0x9a8a72, roughness: 0.9 });
+    const roofMaterial = new THREE.MeshStandardMaterial({ color: 0x6e4a35, roughness: 0.85 });
+
+    XRPublisher.registerDecoration({
+      name: 'settler-hut',
+      density: 0.35,
+      minSpacing: 40,
+      maxSlope: 0.12,          // flat ground only (the buildable clearings)
+      minWaterDistance: 10,    // dry footing
+      // biomes: ['buildable'], // optionally hard-restrict to town-land
+      collision: true,
+      create(spawn) {
+        if (spawn.treeDistance < 5) return null;  // don't clip into a trunk
+        const hut = new THREE.Group();
+        const w = 3.5 + spawn.rng() * 1.5;
+        const d = 3.0 + spawn.rng() * 1.5;
+        const h = 2.4 + spawn.rng() * 0.6;
+        const walls = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMaterial);
+        walls.position.y = h / 2;
+        walls.castShadow = true;
+        walls.receiveShadow = true;
+        hut.add(walls);
+        const roof = new THREE.Mesh(new THREE.ConeGeometry(Math.max(w, d) * 0.78, h * 0.7, 4), roofMaterial);
+        roof.position.y = h + h * 0.35;
+        roof.rotation.y = Math.PI / 4;
+        roof.castShadow = true;
+        hut.add(roof);
+        hut.rotation.y = spawn.rng() * Math.PI * 2;
+        return hut;
+      },
+    });
+
+    /* 4. Surface + near-water: reeds that only grow on grass within 8u of
+     *    water — `surface` targets the surface type the terrain actually
+     *    paints, `maxWaterDistance` keeps them on the shoreline band. */
+    const reedMaterial = new THREE.MeshStandardMaterial({ color: 0x5b7a3a, roughness: 1 });
+    XRPublisher.registerDecoration({
+      name: 'shoreline-reeds',
+      density: 3,
+      surface: 'grass',
+      maxWaterDistance: 8,
+      minSpacing: 1.5,
+      create(spawn) {
+        const clump = new THREE.Group();
+        const n = 3 + Math.floor(spawn.rng() * 4);
+        for (let i = 0; i < n; i++) {
+          const h = 0.8 + spawn.rng() * 0.9;
+          const blade = new THREE.Mesh(new THREE.ConeGeometry(0.05, h, 4), reedMaterial);
+          blade.position.set((spawn.rng() - 0.5) * 0.6, h / 2, (spawn.rng() - 0.5) * 0.6);
+          blade.rotation.set((spawn.rng() - 0.5) * 0.3, spawn.rng() * Math.PI, (spawn.rng() - 0.5) * 0.3);
+          clump.add(blade);
+        }
+        return clump;
+      },
+    });
+
+    /* 5. Surface + instanced: pebbles scattered densely on the bare
+     *    town-land (surface:'dirt'). `instanced:true` collapses every
+     *    pebble in a chunk into a single InstancedMesh — `transform()`
+     *    supplies per-instance rotation/scale from spawn.rng. Only valid
+     *    for static specs (no update). */
+    const pebbleGeo = new THREE.DodecahedronGeometry(0.3);
+    const pebbleMaterial = new THREE.MeshStandardMaterial({ color: 0x8a8275, roughness: 0.95 });
+    XRPublisher.registerDecoration({
+      name: 'path-pebbles',
+      density: 12,
+      surface: 'dirt',
+      instanced: true,
+      create() {
+        // Called ONCE as the shared template — geometry/material only.
+        return new THREE.Mesh(pebbleGeo, pebbleMaterial);
+      },
+      transform(spawn) {
+        return {
+          rotationY: spawn.rng() * Math.PI * 2,
+          tilt: (spawn.rng() - 0.5) * 0.5,
+          scale: 0.5 + spawn.rng() * 1.0,
+        };
+      },
+    });
+
+    /* 6. In-water: fish that spawn BELOW the waterline (surface:'water'
+     *    drops the default above-water height floor) and bob just under
+     *    the surface. The engine adds spawn.position (the lakebed), so we
+     *    offset up toward spawn.waterLevel. */
+    const fishMaterial = new THREE.MeshStandardMaterial({ color: 0xc8643c, roughness: 0.4, metalness: 0.1 });
+    XRPublisher.registerDecoration({
+      name: 'lake-fish',
+      density: 2,
+      surface: 'water',
+      minSpacing: 4,
+      create(spawn) {
+        const fish = new THREE.Mesh(new THREE.ConeGeometry(0.15, 0.6, 6), fishMaterial);
+        fish.rotation.z = Math.PI / 2;
+        // Rise from the lakebed (y=0 after the engine adds position) to a
+        // little under the surface.
+        const depth = spawn.waterLevel - spawn.position[1];
+        fish.userData.baseY = Math.max(0.3, depth * (0.4 + spawn.rng() * 0.4));
+        fish.userData.phase = spawn.rng() * Math.PI * 2;
+        fish.position.y = fish.userData.baseY;
+        return fish;
+      },
+      update(fish, _delta, elapsed) {
+        const p = fish.userData.phase;
+        fish.position.y = fish.userData.baseY + Math.sin(elapsed * 1.5 + p) * 0.15;
+        fish.rotation.y = Math.sin(elapsed * 0.5 + p) * 0.8;
+      },
+    });
+
+    /* 7. On-tree: a lantern hung in the canopy of engine trees. anchor:
+     *    'tree' walks the chunk's tree spawns; density is the per-tree
+     *    chance. spawn.anchorScale/anchorRadius describe the canopy. */
+    const lanternMaterial = new THREE.MeshStandardMaterial({
+      color: 0xffcc66, emissive: 0xaa6600, emissiveIntensity: 0.6, roughness: 0.5,
+    });
+    XRPublisher.registerDecoration({
+      name: 'canopy-lantern',
+      anchor: 'tree',
+      density: 0.4,        // ~40% of trees get one
+      create(spawn) {
+        const lantern = new THREE.Mesh(new THREE.SphereGeometry(0.3, 10, 8), lanternMaterial);
+        // Hang a touch below the canopy centre.
+        lantern.position.y -= 1.0 + spawn.rng() * 1.0;
+        return lantern;
+      },
+    });
+
+    /* 8. On-mountain: a totem on each mountain summit. anchor:'mountain'
+     *    places spawns at peaks that fall inside the chunk (so a peak is
+     *    decorated once, not per overlapping chunk). */
+    const totemMaterial = new THREE.MeshStandardMaterial({ color: 0x4a3b8c, roughness: 0.7 });
+    XRPublisher.registerDecoration({
+      name: 'summit-totem',
+      anchor: 'mountain',
+      density: 1,
+      create(spawn) {
+        const totem = new THREE.Group();
+        const stack = 3 + Math.floor(spawn.rng() * 2);
+        for (let i = 0; i < stack; i++) {
+          const seg = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.0, 1.2), totemMaterial);
+          seg.position.y = 0.5 + i * 1.0;
+          seg.rotation.y = spawn.rng() * 0.4;
+          totem.add(seg);
+        }
+        return totem;
+      },
+    });
+
+    /* 9. Dirt-surrounded: a campfire that paints a dirt clearing on the
+     *    terrain around itself and clears grass out of it. groundPatch
+     *    works on BOTH renderers (?renderer=webgl matches). */
+    const logMaterial = new THREE.MeshStandardMaterial({ color: 0x4a3526, roughness: 0.9 });
+    const emberMaterial = new THREE.MeshStandardMaterial({
+      color: 0xff5a1f, emissive: 0xff3300, emissiveIntensity: 1.2,
+    });
+    XRPublisher.registerDecoration({
+      name: 'campfire',
+      density: 0.4,
+      surface: 'grass',
+      maxSlope: 0.2,
+      minSpacing: 30,
+      collision: true,
+      groundPatch: { radius: 4.5, color: [0.28, 0.2, 0.12], clearGrass: true },
+      create(spawn) {
+        const fire = new THREE.Group();
+        const logs = 4 + Math.floor(spawn.rng() * 2);
+        for (let i = 0; i < logs; i++) {
+          const log = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, 1.4, 6), logMaterial);
+          const a = (i / logs) * Math.PI * 2;
+          log.position.set(Math.cos(a) * 0.3, 0.3, Math.sin(a) * 0.3);
+          log.rotation.set(Math.PI / 2.4, a, 0);
+          fire.add(log);
+        }
+        const embers = new THREE.Mesh(new THREE.IcosahedronGeometry(0.35, 0), emberMaterial);
+        embers.position.y = 0.25;
+        fire.add(embers);
+        return fire;
+      },
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<!--
+  EXAMPLE — Believable terrain "sites" via custom surfaces (town-center variants)
+  ------------------------------------------------------------------------------
+  Three drop-in plugins, each a VARIANT of town-center, that carve a believable
+  SITE into the terrain: a custom procedural GROUND material, FRAMED by a bare-
+  dirt apron so it eases into the surrounding ground, with 3D STRUCTURES on top.
+  Not amateur texture swaps — earthy materials that belong where they sit:
+
+    • ancient-ruins    → DEFAULT biome → 'flagstone'    (Worley stone slabs)  + broken columns
+    • farm-plots       → PLAINS biome  → 'tilled-soil'  (furrowed dirt)       + fence + hay
+    • rocky-clearings  → DEFAULT biome → 'gravel'       (dirt + pebbles)      + boulders + cairn
+
+  Three different procedural TECHNIQUES (cellular / striped / continuous noise),
+  all in natural palettes. The engine composites each straight into the shared
+  terrain material on WebGPU; grass is cleared inside; the dirt apron blends it.
+
+  WATER-SAFE FROM THE CORE: the terrain material now fades any region surface out
+  at the water line (regionWaterY), so a site that brushes a pond keeps the natural
+  shore/water there instead of paving over it — no plugin-side water hack. Sites
+  also place only on dry, flat ground.
+
+  HOW TO SEE THEM: sites are sparse + deterministic, so ROAM (fly: double-tap
+  space). Watch the console for "[ancient-ruins] registered …" then walk onto the
+  flagstone / tilled soil / gravel. Add ?renderer=webgl to compare the WebGL flat
+  fallbacks (custom TSL can't compile to GLSL; each renders its fallbackColor).
+
+  Run: npm run dev → /decorations/biome-surfaces/
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Decoration · Believable terrain sites (custom surfaces)</title>
+  <style>
+    body { margin: 0; background: #191919; color: #fff; font-family: sans-serif; }
+    #world-view { width: 100vw; height: 100vh; }
+    #caption { position: fixed; top: 12px; left: 12px; max-width: 470px; padding: 10px 14px;
+      background: rgba(0,0,0,0.62); border-radius: 8px; font-size: 13px; line-height: 1.45; z-index: 10; }
+    #caption b { color: #9fe870; }
+    #caption code { color: #ffd479; }
+    #caption .sw { display: inline-block; width: 11px; height: 11px; border-radius: 2px;
+      vertical-align: middle; margin-right: 4px; }
+  </style>
+</head>
+<body>
+  <div id="caption">
+    <b>Believable terrain sites — custom ground material + dirt frame + structures</b><br>
+    Each is a <code>town-center</code> variant: a custom
+    <code>registerTerrainSurface</code> ground, a bare-dirt apron, and 3D props.
+    The surface fades out at the water line (core <code>regionWaterY</code>) so it
+    never paves over water. <b>Fly around</b> (double-tap space) to find:<br>
+    <span class="sw" style="background:#7a756a"></span><b>flagstone ruins</b> ·
+    <span class="sw" style="background:#5a4226"></span><b>tilled farm plots</b> ·
+    <span class="sw" style="background:#4a4038"></span><b>gravel clearings</b> ·
+    <span class="sw" style="background:#6a5a44"></span><b>roads</b> that link
+    settlements and bend around water.<br>
+    Watch the console. Add <code>?renderer=webgl</code> for the flat fallbacks.
+  </div>
+  <div id="world-view">
+    <three-environment-block devicetarget="vr" scale="1" positiony="-1" camcollisions="1">
+      <three-terrain-block width="100" height="100" segments="100" scale="0.5" heightscale="45"
+        seed="biome-surfaces-1" color="#4a7c59" roughness="0.8" metalness="0.2"
+        noiseoctaves="6" noisepersistence="0.5" noiselacunarity="2"
+        skycolor="#87CEEB" horizoncolor="#E0F7FF" timeofday="12" timecycleduration="0"
+        positionx="0" positiony="-10" positionz="0"></three-terrain-block>
+    </three-environment-block>
+  </div>
+
+  <!-- Runtime first, then the drop-in plugins (served from examples/plugins). -->
+  <script src="/index_files/xr-publisher.umd.js"></script>
+  <script src="/plugins/ancient-ruins-xr-publisher-plugin.umd.js"></script>
+  <script src="/plugins/farm-plots-xr-publisher-plugin.umd.js"></script>
+  <script src="/plugins/rocky-clearings-xr-publisher-plugin.umd.js"></script>
+  <!-- Roads: settlement nodes linked by gravel roads that route around water. -->
+  <script src="/plugins/town-roads-xr-publisher-plugin.umd.js"></script>
+  <!-- Walk-in buildings: cottage / two-room home / barn with procedural wood. -->
+  <script src="/plugins/settler-huts-xr-publisher-plugin.umd.js"></script>
+  <!-- Procedural seeded TOWNS: cobblestone plaza + assorted walk-in buildings at each road town. -->
+  <script src="/plugins/town-center-xr-publisher-plugin.umd.js"></script>
+  <!-- Music experience: the stage-in-the-round concert at the nearest town
+       (replaces the old resonance-plaza — one music experience per town). -->
+  <script src="/plugins/resonance-stage-xr-publisher-plugin.umd.js"></script>
+  <!-- Region-based weather: seed-stable cloud zones (storm/overcast/clear) + rain driven by getWeatherAt. -->
+  <script src="/plugins/weather-zones-xr-publisher-plugin.umd.js"></script>
+</body>
+</html>

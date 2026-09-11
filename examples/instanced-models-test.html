@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<script>
+		// Dev harness only: point the runtime at the deployment API. The
+		// package itself ships with no baked-in host (published worlds
+		// resolve their own origin).
+		window.XRP_API_BASE = "https://xr-publisher.sxpdigital.workers.dev";
+	</script>
+
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>XR Publisher - Instanced Models Test</title>
+    <script type="module" src="../dist/xr-publisher.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+        }
+        .info {
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            max-width: 300px;
+            z-index: 1000;
+        }
+        .info h3 {
+            margin: 0 0 10px 0;
+            color: #4CAF50;
+        }
+        .info ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="info">
+        <h3>🔄 Instanced Models Test</h3>
+        <ul>
+            <li><strong>5 cube instances</strong> - arranged in a grid</li>
+            <li><strong>Performance benefit:</strong> Model loaded once, rendered 5 times</li>
+            <li>Click and drag to orbit</li>
+        </ul>
+    </div>
+
+    <!-- Example: 5 instanced cubes in a grid pattern -->
+    <!-- wp:xr-publisher/model-block {"threeObjectUrl":"https://testassets.xpp.world/cube.glb","instanced":true,"instanceCount":5} -->
+    <three-environment-block
+        devicetarget="vr"
+        bg_color="#87CEEB"
+        camcollisions="true"
+    >
+        <!-- Instanced model with 5 instances -->
+        <three-model-block 
+            class="wp-block-xr-publisher-model-block" 
+            threeobjecturl="https://testassets.xpp.world/authors/antpb/primitivegeneratedtextured1760646919185.glb"
+            animations="" 
+            collidable="0"
+            alt="Instanced Cubes"
+            instanced="true"
+            instancecount="5"
+            instances='[
+                {"positionX": -4, "positionY": 0, "positionZ": 0, "rotationX": 0, "rotationY": 0, "rotationZ": 0, "scaleX": 1, "scaleY": 1, "scaleZ": 1},
+                {"positionX": -2, "positionY": 0, "positionZ": 0, "rotationX": 0, "rotationY": 45, "rotationZ": 0, "scaleX": 1, "scaleY": 1, "scaleZ": 1},
+                {"positionX": 0, "positionY": 0, "positionZ": 0, "rotationX": 0, "rotationY": 90, "rotationZ": 0, "scaleX": 1.5, "scaleY": 1.5, "scaleZ": 1.5},
+                {"positionX": 2, "positionY": 0, "positionZ": 0, "rotationX": 0, "rotationY": 135, "rotationZ": 0, "scaleX": 1, "scaleY": 1, "scaleZ": 1},
+                {"positionX": 4, "positionY": 0, "positionZ": 0, "rotationX": 0, "rotationY": 180, "rotationZ": 0, "scaleX": 1, "scaleY": 1, "scaleZ": 1}
+            ]'>
+        </three-model-block>
+        <!-- /wp:xr-publisher/model-block -->
+
+        <!-- Spawn point -->
+        <three-spawn-point-block
+            positionx="0"
+            positiony="1.6"
+            positionz="8"
+        ></three-spawn-point-block>
+
+        <!-- Ambient light -->
+        <three-light-block 
+            type="ambient"
+            color="#ffffff"
+            intensity="0.6"
+        ></three-light-block>
+
+        <!-- Directional light -->
+        <three-light-block 
+            type="directional"
+            color="#ffffff"
+            intensity="0.8"
+            positionx="5"
+            positiony="10"
+            positionz="7.5"
+        ></three-light-block>
+    </three-environment-block>
+
+    <script>
+        // Initialize XR Publisher
+        const publisher = new XRPublisher({
+            containedMode: false
+        });
+        publisher.init();
+        
+        console.log('🔄 Instanced Models Test loaded - check console for instancing logs');
+    </script>
+</body>
+</html>
+

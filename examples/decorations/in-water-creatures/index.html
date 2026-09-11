@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<!--
+  DECORATION EXAMPLE — In-water creatures
+  ---------------------------------------
+  `surface:'water'` is special: it DROPS the default above-waterline height
+  floor, so a spec can spawn submerged. Place the object between the lakebed
+  (`spawn.position[1]`, which the engine adds) and the surface
+  (`spawn.waterLevel`, a local Y in the same frame as position[1]).
+
+  This pairs an `update()` hook so the fish bob and turn under the surface.
+
+  Roam to a lake/ocean: fish drift below the water plane, none on land.
+
+  Run: npm run dev → /decorations/in-water-creatures/
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Decoration · In-water creatures</title>
+  <style>
+    body { margin: 0; background: #191919; color: #fff; font-family: sans-serif; }
+    #world-view { width: 100vw; height: 100vh; }
+    #caption { position: fixed; top: 12px; left: 12px; max-width: 360px; padding: 10px 14px;
+      background: rgba(0,0,0,0.6); border-radius: 8px; font-size: 13px; line-height: 1.4; z-index: 10; }
+    #caption b { color: #9fe870; }
+  </style>
+</head>
+<body>
+  <div id="caption">
+    <b>In-water creatures + glTF models</b><br>
+    Fish are a <i>glTF model</i> loaded via <code>XRPublisher.loadModel</code>,
+    swimming submerged <i>(waterPlacement:'submerged')</i>. Lily pads float at
+    the surface <i>(waterPlacement:'surface')</i>. Roam to a lake/coast.
+  </div>
+  <div id="world-view">
+    <three-environment-block devicetarget="vr" scale="1" positiony="-1" camcollisions="1">
+      <three-terrain-block width="100" height="100" segments="100" scale="0.5" heightscale="45"
+        seed="ex-lake" color="#4a7c59" roughness="0.8" metalness="0.2"
+        noiseoctaves="6" noisepersistence="0.5" noiselacunarity="2"
+        skycolor="#87CEEB" horizoncolor="#E0F7FF" timeofday="12" timecycleduration="0"
+        positionx="0" positiony="-10" positionz="0"></three-terrain-block>
+    </three-environment-block>
+  </div>
+
+  <script src="/index_files/xr-publisher.umd.js"></script>
+  <script>
+    const { XRPublisher, THREE } = window;
+
+    // AT THE SURFACE (primitive): `waterPlacement:'surface'` seats the object
+    // exactly at the waterline — for floating items (lily pads, buoys).
+    const padMat = new THREE.MeshStandardMaterial({ color: 0x2f7d32, roughness: 0.8 });
+    XRPublisher.registerDecoration({
+      name: 'lily-pad',
+      density: 2,
+      surface: 'water',
+      waterPlacement: 'surface',
+      minSpacing: 2,
+      create(spawn) {
+        const pad = new THREE.Mesh(new THREE.CircleGeometry(0.4 + spawn.rng() * 0.3, 12), padMat);
+        pad.rotation.x = -Math.PI / 2;       // lie flat on the surface
+        pad.rotation.z = spawn.rng() * Math.PI * 2;
+        return pad;
+      },
+    });
+
+    // SUBMERGED (glTF model): load a published GLB once with
+    // XRPublisher.loadModel (cached per URL), normalize its size, then
+    // register. `waterPlacement:'submerged'` seats it in the water column;
+    // the fish animates in LOCAL space (the placement is on a wrapper, so
+    // update() can't lose it). create() returns a .clone(true) per spawn —
+    // clones SHARE geometry/materials, so it's one GPU upload for all fish.
+    (async () => {
+      const FISH_URL = 'https://items.sxp.digital/f8886983-a11b-4367-a19c-388662542d84/fish.glb';
+      let fishModel;
+      try {
+        fishModel = await XRPublisher.loadModel(FISH_URL);
+      } catch (err) {
+        console.error('[in-water] failed to load fish model', err);
+        return;
+      }
+      const size = new THREE.Box3().setFromObject(fishModel).getSize(new THREE.Vector3());
+      const maxDim = Math.max(size.x, size.y, size.z) || 1;
+      fishModel.scale.setScalar(0.8 / maxDim);
+
+      XRPublisher.registerDecoration({
+        name: 'lake-fish',
+        density: 3,
+        surface: 'water',
+        waterPlacement: 'submerged',
+        minSpacing: 3,
+        create(spawn) {
+          const fish = fishModel.clone(true);
+          fish.userData.phase = spawn.rng() * Math.PI * 2;
+          fish.userData.heading = spawn.rng() * Math.PI * 2;
+          fish.rotation.y = fish.userData.heading;
+          return fish;
+        },
+        update(fish, _delta, elapsed) {
+          const p = fish.userData.phase;
+          fish.position.y = Math.sin(elapsed * 1.5 + p) * 0.15;
+          fish.rotation.y = fish.userData.heading + Math.sin(elapsed * 0.4 + p) * 0.5;
+        },
+        // Clones share the model's geometry/materials — disposing them would
+        // break other fish. The cached model owns them for the session.
+        dispose() {},
+      });
+    })();
+  </script>
+</body>
+</html>

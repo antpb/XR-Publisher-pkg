@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<!--
+  DECORATION EXAMPLE — On trees
+  -----------------------------
+  `anchor:'tree'` places spawns in the canopies of the engine's procedural
+  trees instead of on the ground grid. The generator walks the chunk's tree
+  spawns; `density` is the per-tree chance (0..1). The anchor point sits in
+  the canopy; `spawn.anchorScale` / `spawn.anchorRadius` describe the crown
+  so you can offset within it. Use spawn.rng for stable per-tree variation.
+
+  Roam into a forest/grove: lit lanterns hang in roughly 40% of the trees.
+
+  Run: npm run dev → /decorations/on-trees/
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Decoration · On trees</title>
+  <style>
+    body { margin: 0; background: #191919; color: #fff; font-family: sans-serif; }
+    #world-view { width: 100vw; height: 100vh; }
+    #caption { position: fixed; top: 12px; left: 12px; max-width: 360px; padding: 10px 14px;
+      background: rgba(0,0,0,0.6); border-radius: 8px; font-size: 13px; line-height: 1.4; z-index: 10; }
+    #caption b { color: #9fe870; }
+  </style>
+</head>
+<body>
+  <div id="caption">
+    <b>On trees</b><br>
+    Lanterns <i>(anchor:'tree')</i> hang in the canopies of engine trees.
+    Roam into a grove and look up — about 40% of trees carry one.
+  </div>
+  <div id="world-view">
+    <three-environment-block devicetarget="vr" scale="1" positiony="-1" camcollisions="1">
+      <three-terrain-block width="100" height="100" segments="100" scale="0.5" heightscale="45"
+        seed="ex-forest" color="#4a7c59" roughness="0.8" metalness="0.2"
+        noiseoctaves="6" noisepersistence="0.5" noiselacunarity="2"
+        skycolor="#87CEEB" horizoncolor="#E0F7FF" timeofday="14" timecycleduration="0"
+        positionx="0" positiony="-10" positionz="0"></three-terrain-block>
+    </three-environment-block>
+  </div>
+
+  <script src="/index_files/xr-publisher.umd.js"></script>
+  <script>
+    const { XRPublisher, THREE } = window;
+
+    const lanternMat = new THREE.MeshStandardMaterial({
+      color: 0xffcc66, emissive: 0xaa6600, emissiveIntensity: 0.7, roughness: 0.5,
+    });
+    const ringMat = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.8, metalness: 0.4 });
+
+    XRPublisher.registerDecoration({
+      name: 'canopy-lantern',
+      anchor: 'tree',            // ← anchor on the canopy UNDERSIDE
+      density: 0.4,              // ~40% of trees get one
+      // The anchor is on a REAL canopy blob's underside (local y=0 = the leaf
+      // surface). Attach the lantern there — top touching the leaf, globe just
+      // below on a short cord. No long fake drop; placement is accurate.
+      create(spawn) {
+        const g = new THREE.Group();
+        const cord = 0.12;
+        const string = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.012, cord, 4), ringMat);
+        string.position.y = -cord / 2;              // top at y=0, on the leaf surface
+        const cap = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.14, 8), ringMat);
+        cap.position.y = -cord + 0.02;
+        const globe = new THREE.Mesh(new THREE.SphereGeometry(0.26, 12, 8), lanternMat);
+        globe.position.y = -cord - 0.26;
+        g.add(string, cap, globe);
+        return g;
+      },
+    });
+  </script>
+</body>
+</html>

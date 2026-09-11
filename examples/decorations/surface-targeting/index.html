@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<!--
+  DECORATION EXAMPLE — Surface targeting
+  --------------------------------------
+  `surface:` restricts a decoration to the surface TYPE the terrain paints:
+    'water' | 'sand' | 'grass' | 'dirt' | 'rock' | 'snow'
+  (single value or an array). Classification matches the colour bands the
+  terrain actually shows, and is bit-identical across renderers.
+
+  Here: white flowers ONLY on grass, grey rubble ONLY on exposed rock.
+  Roam to a hillside/cliff to see rubble; flowers carpet the grassy flats.
+
+  Run: npm run dev → /decorations/surface-targeting/
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Decoration · Surface targeting</title>
+  <style>
+    body { margin: 0; background: #191919; color: #fff; font-family: sans-serif; }
+    #world-view { width: 100vw; height: 100vh; }
+    #caption { position: fixed; top: 12px; left: 12px; max-width: 360px; padding: 10px 14px;
+      background: rgba(0,0,0,0.6); border-radius: 8px; font-size: 13px; line-height: 1.4; z-index: 10; }
+    #caption b { color: #9fe870; }
+  </style>
+</head>
+<body>
+  <div id="caption">
+    <b>Surface targeting</b><br>
+    Flowers <i>(surface:'grass')</i> grow only on grass; rubble
+    <i>(surface:'rock')</i> appears only on cliffs/steep faces. Roam to a
+    hillside to see the split.
+  </div>
+  <div id="world-view">
+    <three-environment-block devicetarget="vr" scale="1" positiony="-1" camcollisions="1">
+      <three-terrain-block width="100" height="100" segments="100" scale="0.5" heightscale="60"
+        seed="ex-surface" color="#4a7c59" roughness="0.8" metalness="0.2"
+        noiseoctaves="6" noisepersistence="0.5" noiselacunarity="2"
+        skycolor="#87CEEB" horizoncolor="#E0F7FF" timeofday="12" timecycleduration="0"
+        positionx="0" positiony="-10" positionz="0"></three-terrain-block>
+    </three-environment-block>
+  </div>
+
+  <script src="/index_files/xr-publisher.umd.js"></script>
+  <script>
+    const { XRPublisher, THREE } = window;
+
+    // ── Grass-only flowers ──────────────────────────────────────────────
+    const petalMat = new THREE.MeshStandardMaterial({ color: 0xfafafa, roughness: 0.6 });
+    const coreMat  = new THREE.MeshStandardMaterial({ color: 0xf2c84b, roughness: 0.5 });
+    XRPublisher.registerDecoration({
+      name: 'surface-flower',
+      density: 8,
+      surface: 'grass',          // ← only on grass
+      minSpacing: 1.2,
+      create(spawn) {
+        const f = new THREE.Group();
+        const stem = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.02, 0.02, 0.5, 4),
+          new THREE.MeshStandardMaterial({ color: 0x4a7c3f }));
+        stem.position.y = 0.25;
+        const core = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 5), coreMat);
+        core.position.y = 0.5;
+        f.add(stem, core);
+        const petals = 5;
+        for (let i = 0; i < petals; i++) {
+          const p = new THREE.Mesh(new THREE.SphereGeometry(0.07, 5, 4), petalMat);
+          const a = (i / petals) * Math.PI * 2;
+          p.position.set(Math.cos(a) * 0.1, 0.5, Math.sin(a) * 0.1);
+          p.scale.set(1, 0.4, 1.4);
+          f.add(p);
+        }
+        f.rotation.y = spawn.rng() * Math.PI * 2;
+        return f;
+      },
+    });
+
+    // ── Rock-only rubble ────────────────────────────────────────────────
+    const rubbleMat = new THREE.MeshStandardMaterial({ color: 0x7d7a73, roughness: 1 });
+    XRPublisher.registerDecoration({
+      name: 'surface-rubble',
+      density: 6,
+      surface: 'rock',           // ← only on exposed rock / steep faces
+      create(spawn) {
+        const g = new THREE.Group();
+        const n = 2 + Math.floor(spawn.rng() * 3);
+        for (let i = 0; i < n; i++) {
+          const r = new THREE.Mesh(new THREE.DodecahedronGeometry(0.2 + spawn.rng() * 0.3), rubbleMat);
+          r.position.set((spawn.rng() - 0.5) * 1.2, 0.1, (spawn.rng() - 0.5) * 1.2);
+          r.rotation.set(spawn.rng() * 3, spawn.rng() * 3, spawn.rng() * 3);
+          g.add(r);
+        }
+        return g;
+      },
+    });
+  </script>
+</body>
+</html>

@@ -18,7 +18,6 @@ yarn-error.log*
 .pnp.js
 .cache/
 dist/
-examples/
 coverage/
 *.log
 *.swp
@@ -28,3 +27,8 @@ coverage/
 crates/*/target/
 crates/*/pkg/
 src/workers/wasm/
+
+examples/dist/
+examples/**/node_modules/
+examples/assets/defaults/
+examples/.DS_Store

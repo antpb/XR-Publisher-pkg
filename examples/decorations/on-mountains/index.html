@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<!--
+  DECORATION EXAMPLE — On mountains
+  ---------------------------------
+  `anchor:'mountain'` places spawns on mountain SUMMITS. A peak is owned by
+  the single chunk its XZ falls in, so a summit decoration spawns exactly
+  once — not duplicated across overlapping chunks. `density` is the number
+  of spawns per peak; `spawn.anchorScale` = base radius, `spawn.anchorRadius`
+  = a usable summit scatter radius.
+
+  Mountains are seed-driven and sparse — fly up (double-jump / fly toggle)
+  and roam to find a peak, then look for the totem on top.
+
+  Run: npm run dev → /decorations/on-mountains/
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Decoration · On mountains</title>
+  <style>
+    body { margin: 0; background: #191919; color: #fff; font-family: sans-serif; }
+    #world-view { width: 100vw; height: 100vh; }
+    #caption { position: fixed; top: 12px; left: 12px; max-width: 380px; padding: 10px 14px;
+      background: rgba(0,0,0,0.6); border-radius: 8px; font-size: 13px; line-height: 1.4; z-index: 10; }
+    #caption b { color: #9fe870; }
+  </style>
+</head>
+<body>
+  <div id="caption">
+    <b>On mountains</b><br>
+    A totem <i>(anchor:'mountain')</i> sits on each mountain summit, once per
+    peak. Mountains are sparse — fly up and roam to find one. Higher
+    <code>heightscale</code> makes peaks more dramatic.
+  </div>
+  <div id="world-view">
+    <three-environment-block devicetarget="vr" scale="1" positiony="-1" camcollisions="1">
+      <three-terrain-block width="100" height="100" segments="100" scale="0.5" heightscale="80"
+        seed="ex-peaks" color="#4a7c59" roughness="0.8" metalness="0.2"
+        noiseoctaves="6" noisepersistence="0.5" noiselacunarity="2"
+        skycolor="#87CEEB" horizoncolor="#E0F7FF" timeofday="12" timecycleduration="0"
+        positionx="0" positiony="-10" positionz="0"></three-terrain-block>
+    </three-environment-block>
+  </div>
+
+  <script src="/index_files/xr-publisher.umd.js"></script>
+  <script>
+    const { XRPublisher, THREE } = window;
+
+    const totemMat = new THREE.MeshStandardMaterial({ color: 0x4a3b8c, roughness: 0.7 });
+    const glowMat  = new THREE.MeshStandardMaterial({ color: 0x8fd0ff, emissive: 0x2a6cff, emissiveIntensity: 0.8 });
+
+    XRPublisher.registerDecoration({
+      name: 'summit-totem',
+      anchor: 'mountain',        // ← anchor on mountain peaks
+      density: 1,                // one totem per peak
+      create(spawn) {
+        const totem = new THREE.Group();
+        const stack = 3 + Math.floor(spawn.rng() * 2);
+        for (let i = 0; i < stack; i++) {
+          const seg = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.1, 1.4), totemMat);
+          seg.position.y = 0.55 + i * 1.1;
+          seg.rotation.y = spawn.rng() * 0.5;
+          seg.castShadow = true;
+          totem.add(seg);
+        }
+        const orb = new THREE.Mesh(new THREE.IcosahedronGeometry(0.5, 0), glowMat);
+        orb.position.y = 0.55 + stack * 1.1 + 0.6;
+        totem.add(orb);
+        return totem;
+      },
+    });
+  </script>
+</body>
+</html>

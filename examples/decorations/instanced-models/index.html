@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<!--
+  DECORATION EXAMPLE — Instanced models
+  -------------------------------------
+  `instanced:true` renders every spawn of a STATIC spec as one
+  THREE.InstancedMesh per template mesh — thousands of objects at a handful
+  of draw calls. `create()` is called ONCE (the template: geometry/material
+  source; its root translation is stripped). Per-instance variation comes
+  from `transform(spawn) => { rotationY?, scale?, tilt? }` — NOT from
+  per-spawn geometry. Use spawn.rng inside transform for stable variation.
+
+  Rules:
+   - Only valid for static specs (no `update`).
+   - Hoist geometry AND material to module singletons (shared across chunks).
+   - Pair with `collision` for per-instance cuboid colliders if needed.
+
+  Run: npm run dev → /decorations/instanced-models/
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Decoration · Instanced models</title>
+  <style>
+    body { margin: 0; background: #191919; color: #fff; font-family: sans-serif; }
+    #world-view { width: 100vw; height: 100vh; }
+    #caption { position: fixed; top: 12px; left: 12px; max-width: 380px; padding: 10px 14px;
+      background: rgba(0,0,0,0.6); border-radius: 8px; font-size: 13px; line-height: 1.4; z-index: 10; }
+    #caption b { color: #9fe870; }
+  </style>
+</head>
+<body>
+  <div id="caption">
+    <b>Instanced models</b><br>
+    A dense field of rocks <i>(instanced:true)</i> — all rocks in a chunk are
+    ONE InstancedMesh, so density costs GPU throughput, not draw calls. Per-
+    rock rotation/scale comes from <code>transform(spawn)</code>.
+  </div>
+  <div id="world-view">
+    <three-environment-block devicetarget="vr" scale="1" positiony="-1" camcollisions="1">
+      <three-terrain-block width="100" height="100" segments="100" scale="0.5" heightscale="50"
+        seed="ex-instanced" color="#4a7c59" roughness="0.8" metalness="0.2"
+        noiseoctaves="6" noisepersistence="0.5" noiselacunarity="2"
+        skycolor="#87CEEB" horizoncolor="#E0F7FF" timeofday="12" timecycleduration="0"
+        positionx="0" positiony="-10" positionz="0"></three-terrain-block>
+    </three-environment-block>
+  </div>
+
+  <script src="/index_files/xr-publisher.umd.js"></script>
+  <script>
+    const { XRPublisher, THREE } = window;
+
+    // Shared template resources — created once, reused by every instance in
+    // every chunk. The engine instances the geometry; do NOT allocate per
+    // spawn here.
+    const rockGeo = new THREE.DodecahedronGeometry(0.35);
+    const rockMat = new THREE.MeshStandardMaterial({ color: 0x8a8275, roughness: 0.95 });
+
+    XRPublisher.registerDecoration({
+      name: 'rock-field',
+      density: 20,               // dense — cheap thanks to instancing
+      instanced: true,           // ← one InstancedMesh per chunk
+      // collision: true,        // (optional) per-instance cuboid colliders
+      create() {
+        // Called ONCE as the template. Geometry/material source only — the
+        // engine strips any root position and instances the meshes.
+        return new THREE.Mesh(rockGeo, rockMat);
+      },
+      transform(spawn) {
+        // Per-instance variance — baked into the instance matrix.
+        return {
+          rotationY: spawn.rng() * Math.PI * 2,
+          tilt: (spawn.rng() - 0.5) * 0.6,
+          scale: 0.4 + spawn.rng() * 1.3,
+        };
+      },
+    });
+  </script>
+</body>
+</html>

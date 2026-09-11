@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<!--
+  DECORATION EXAMPLE — Minimal
+  ----------------------------
+  The smallest useful decoration: one mesh, one shared material, scattered
+  over the terrain. This is the template every other example builds on.
+
+  Run: npm run dev → /decorations/minimal/
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Decoration · Minimal</title>
+  <style>
+    body { margin: 0; background: #191919; color: #fff; font-family: sans-serif; }
+    #world-view { width: 100vw; height: 100vh; }
+    #caption { position: fixed; top: 12px; left: 12px; max-width: 360px; padding: 10px 14px;
+      background: rgba(0,0,0,0.6); border-radius: 8px; font-size: 13px; line-height: 1.4; z-index: 10; }
+    #caption b { color: #9fe870; }
+  </style>
+</head>
+<body>
+  <div id="caption">
+    <b>Minimal decoration</b><br>
+    A single mushroom mesh scattered across the terrain. Walk around (WASD,
+    drag to look) to see them. Same world seed → same spots every visit.
+  </div>
+  <div id="world-view">
+    <three-environment-block devicetarget="vr" scale="1" positiony="-1" camcollisions="1">
+      <three-terrain-block width="100" height="100" segments="100" scale="0.5" heightscale="50"
+        seed="ex-minimal" color="#4a7c59" roughness="0.8" metalness="0.2"
+        noiseoctaves="6" noisepersistence="0.5" noiselacunarity="2"
+        skycolor="#87CEEB" horizoncolor="#E0F7FF" timeofday="12" timecycleduration="0"
+        positionx="0" positiony="-10" positionz="0"></three-terrain-block>
+    </three-environment-block>
+  </div>
+
+  <script src="/index_files/xr-publisher.umd.js"></script>
+  <script>
+    const { XRPublisher, THREE } = window;
+
+    // Share materials across all spawns — create() runs once PER SPAWN, so
+    // never allocate a material inside it. The engine's default cleanup
+    // disposes per-spawn GEOMETRY only and leaves shared materials alone.
+    const capMat  = new THREE.MeshStandardMaterial({ color: 0xc0392b, roughness: 0.7 });
+    const stemMat = new THREE.MeshStandardMaterial({ color: 0xeee4d0, roughness: 0.9 });
+
+    XRPublisher.registerDecoration({
+      name: 'minimal-mushroom',
+      density: 4,            // ~4 spawns per 100×100 chunk
+      minSpacing: 3,         // keep them apart within a chunk
+      create(spawn) {
+        const m = new THREE.Group();
+        // Per-spawn variety MUST come from spawn.rng (a seeded PRNG) so the
+        // same mushroom appears identically on every visit / device.
+        const h = 0.4 + spawn.rng() * 0.5;
+        const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.1, h, 6), stemMat);
+        stem.position.y = h / 2;
+        const cap = new THREE.Mesh(new THREE.SphereGeometry(0.25, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), capMat);
+        cap.position.y = h;
+        cap.scale.y = 0.6;
+        m.add(stem, cap);
+        m.castShadow = true;
+        return m;            // engine applies the terrain position
+      },
+    });
+  </script>
+</body>
+</html>

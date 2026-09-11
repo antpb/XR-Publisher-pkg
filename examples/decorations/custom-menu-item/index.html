@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<!--
+  HUD "MORE" MENU EXAMPLE — plugin menu items
+  -------------------------------------------
+  The hamburger menu in the top-left control cluster is an extension point.
+  The engine registers "Enter VR" there (in VR worlds) so it sits behind a
+  deliberate toggle instead of a bare, accidentally-clickable button — and
+  plugins can add their own rows the same way:
+
+    XRPublisher.registerMenuItem({ id, label, icon?, onSelect, order? })
+    XRPublisher.unregisterMenuItem(id)
+
+  Click the ☰ hamburger (top-left) to open the menu. You'll see the engine's
+  "Enter" (VR) item plus the two registered below. Selecting a row fires its
+  onSelect and closes the menu.
+
+  Notes:
+    • icon is an emoji/text glyph OR an http(s) image URL (optional).
+    • order sorts ascending; ties break by registration order.
+    • The menu appears even with NO networking block — it's mounted for
+      VR/plugin worlds too. With neither networking nor any menu item, the
+      whole left overlay self-hides.
+
+  Run: npm run dev → /decorations/custom-menu-item/
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HUD · Custom menu item</title>
+  <style>
+    body { margin: 0; background: #191919; color: #fff; font-family: sans-serif; }
+    #world-view { width: 100vw; height: 100vh; }
+    #caption { position: fixed; bottom: 12px; left: 12px; max-width: 380px; padding: 10px 14px;
+      background: rgba(0,0,0,0.6); border-radius: 8px; font-size: 13px; line-height: 1.4; z-index: 10; }
+    #caption b { color: #9fe870; }
+    #caption code { color: #ffd479; }
+  </style>
+</head>
+<body>
+  <div id="caption">
+    <b>Custom "More" menu items</b><br>
+    Open the <b>☰</b> menu (top-left) — alongside the engine's <code>Enter</code>
+    (VR) row are two plugin rows added with <code>XRPublisher.registerMenuItem</code>.
+  </div>
+  <div id="world-view">
+    <!-- devicetarget="vr" makes the engine register its built-in "Enter" (VR)
+         menu item, so you can see plugin items sit next to it. -->
+    <three-environment-block devicetarget="vr" scale="1" positiony="-1" camcollisions="1">
+      <three-terrain-block width="100" height="100" segments="100" scale="0.5" heightscale="45"
+        seed="ex-menu" color="#4a7c59" roughness="0.8" metalness="0.2"
+        noiseoctaves="6" noisepersistence="0.5" noiselacunarity="2"
+        skycolor="#87CEEB" horizoncolor="#E0F7FF" timeofday="13" timecycleduration="0"
+        positionx="0" positiony="-10" positionz="0"></three-terrain-block>
+    </three-environment-block>
+  </div>
+
+  <script src="/index_files/xr-publisher.umd.js"></script>
+  <script>
+    const { XRPublisher } = window;
+
+    // ── A simple action: toggle a "torches" state and reflect it in the label.
+    // Re-registering the same id replaces the row, so the menu updates live. ──
+    let torchesOn = false;
+    function registerTorchToggle() {
+      XRPublisher.registerMenuItem({
+        id: 'toggle-torches',
+        label: torchesOn ? 'Torches: on' : 'Torches: off',
+        icon: torchesOn ? '🔥' : '🕯️',
+        order: 10,                       // sorts before the VR item (order 100)
+        onSelect: () => {
+          torchesOn = !torchesOn;
+          registerTorchToggle();         // replace the row with the new label
+          // …your real toggle here (e.g. show/hide lights via a pooled light).
+        },
+      });
+    }
+    registerTorchToggle();
+
+    // ── A link-out action. icon can also be an http(s) image URL. ──
+    XRPublisher.registerMenuItem({
+      id: 'open-docs',
+      label: 'About this world',
+      icon: 'ℹ️',
+      order: 20,
+      onSelect: () => {
+        window.open('https://xrpublisher.com', '_blank', 'noopener');
+      },
+    });
+
+    // To remove a row later:
+    // XRPublisher.unregisterMenuItem('open-docs');
+  </script>
+</body>
+</html>

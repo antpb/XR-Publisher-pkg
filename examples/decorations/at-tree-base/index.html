@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<!--
+  DECORATION EXAMPLE — At the tree base
+  -------------------------------------
+  `anchor:'tree-base'` places ONE anchor per engine tree at the trunk's
+  ground contact — exactly where the trunk meets the terrain. The spawn's
+  local origin (y=0) IS that point, and `spawn.anchorRadius` is a ring just
+  outside the trunk. Build a CLUSTER in create() scattered into that ring
+  with `spawn.rng` (seeded → identical every visit), so mushrooms ring the
+  base of the tree instead of floating around it.
+
+  Contrast with `anchor:'tree'`, which hangs items off the canopy underside.
+
+  Roam into a grove: clumps of mushrooms hug the foot of ~70% of the trees.
+
+  Run: npm run dev → /decorations/at-tree-base/
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Decoration · At the tree base</title>
+  <style>
+    body { margin: 0; background: #191919; color: #fff; font-family: sans-serif; }
+    #world-view { width: 100vw; height: 100vh; }
+    #caption { position: fixed; top: 12px; left: 12px; max-width: 380px; padding: 10px 14px;
+      background: rgba(0,0,0,0.6); border-radius: 8px; font-size: 13px; line-height: 1.4; z-index: 10; }
+    #caption b { color: #9fe870; }
+    #caption code { color: #ffd479; }
+  </style>
+</head>
+<body>
+  <div id="caption">
+    <b>At the tree base</b><br>
+    Mushroom clumps <i>(<code>anchor:'tree-base'</code>)</i> ring the foot of
+    the trees, where the trunk meets the ground. One anchor per tree; the
+    cluster is scattered into <code>spawn.anchorRadius</code> with
+    <code>spawn.rng</code>. Walk into a grove and look down.
+  </div>
+  <div id="world-view">
+    <three-environment-block devicetarget="vr" scale="1" positiony="-1" camcollisions="1">
+      <three-terrain-block width="100" height="100" segments="100" scale="0.5" heightscale="45"
+        seed="ex-forest" color="#4a7c59" roughness="0.8" metalness="0.2"
+        noiseoctaves="6" noisepersistence="0.5" noiselacunarity="2"
+        skycolor="#87CEEB" horizoncolor="#E0F7FF" timeofday="13" timecycleduration="0"
+        positionx="0" positiony="-10" positionz="0"></three-terrain-block>
+    </three-environment-block>
+  </div>
+
+  <script src="/index_files/xr-publisher.umd.js"></script>
+  <script>
+    const { XRPublisher, THREE } = window;
+
+    // Shared materials — create() runs once PER TREE, so never allocate a
+    // material inside it. Two cap colours for a little forest variety.
+    const stemMat = new THREE.MeshStandardMaterial({ color: 0xeee4d0, roughness: 0.95 });
+    const capMatA = new THREE.MeshStandardMaterial({ color: 0xb13030, roughness: 0.7 });
+    const capMatB = new THREE.MeshStandardMaterial({ color: 0xd98a2b, roughness: 0.7 });
+    const capGeo  = new THREE.SphereGeometry(1, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2);
+    const stemGeo = new THREE.CylinderGeometry(0.09, 0.12, 1, 6);
+
+    function makeMushroom(rng) {
+      const m = new THREE.Group();
+      const h = 0.28 + rng() * 0.45;
+      const capR = 0.16 + rng() * 0.18;
+      const stem = new THREE.Mesh(stemGeo, stemMat);
+      stem.scale.set(1, h, 1);
+      stem.position.y = h / 2;
+      const cap = new THREE.Mesh(capGeo, rng() < 0.5 ? capMatA : capMatB);
+      cap.scale.set(capR, capR * 0.62, capR);
+      cap.position.y = h;
+      cap.castShadow = true;
+      m.add(stem, cap);
+      return m;
+    }
+
+    XRPublisher.registerDecoration({
+      name: 'tree-base-mushrooms',
+      anchor: 'tree-base',     // ← trunk/terrain contact point (local y=0)
+      density: 0.7,            // ~70% of trees get a clump
+      create(spawn) {
+        // local origin (0,0,0) is the trunk base on the terrain. Scatter a
+        // ring of mushrooms between the trunk surface and spawn.anchorRadius
+        // (the engine sized it just outside the trunk). All variation comes
+        // from spawn.rng so the clump is identical on every visit.
+        const clump = new THREE.Group();
+        const outer = Math.max(0.5, spawn.anchorRadius || 1.2);
+        const inner = outer * 0.45;                  // keep clear of the trunk
+        const count = 3 + Math.floor(spawn.rng() * 4); // 3–6 mushrooms
+        for (let i = 0; i < count; i++) {
+          const ang = spawn.rng() * Math.PI * 2;
+          const rad = inner + spawn.rng() * (outer - inner);
+          const mush = makeMushroom(spawn.rng);
+          mush.position.set(Math.cos(ang) * rad, 0, Math.sin(ang) * rad);
+          mush.rotation.y = spawn.rng() * Math.PI * 2;
+          clump.add(mush);
+        }
+        return clump;          // engine seats the group at the trunk base
+      },
+    });
+  </script>
+</body>
+</html>

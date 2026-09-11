@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<!--
+  EXAMPLE — Cobblestone plaza + injected components (build a world from code)
+  --------------------------------------------------------------------------
+  Two composability primitives together:
+    • XRPublisher.addTerrainRegion({center, radius, surface}) — replace the
+      terrain SURFACE inside a circle with a procedural material. Here a
+      cobblestone PLAZA floor (a Worley/cellular shader: stones + dark mortar)
+      composited into the shared terrain material, grass auto-cleared inside it.
+      Works on WebGPU + WebGL. Extend it: XRPublisher.registerTerrainSurface(id,
+      tslFn) registers your own surface shader (author TSL via XRPublisher.tsl).
+    • XRPublisher.addModel(...) — inject glTF world components: a centre monument
+      + a ring of instanced pillars, at scene scale.
+
+  Scenario: find the centre of a large flat "buildable" region, lay the
+  cobblestone plaza, drop the monument, ring it with pillars — "target the
+  centre, build outward". A tiny decoration "probe" only samples the terrain
+  (seed + ground height); it renders nothing.
+
+  This seed (`town-847`) centres its biggest flat spot near world (320, -320),
+  south-east of spawn — watch the console, then fly there. Cubes stand in for a
+  fountain + columns; swap the URLs. Add ?renderer=webgl to see the WebGL twin.
+
+  Run: npm run dev → /decorations/town-center/
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Decoration · Cobblestone plaza + addModel</title>
+  <style>
+    body { margin: 0; background: #191919; color: #fff; font-family: sans-serif; }
+    #world-view { width: 100vw; height: 100vh; }
+    #caption { position: fixed; top: 12px; left: 12px; max-width: 430px; padding: 10px 14px;
+      background: rgba(0,0,0,0.6); border-radius: 8px; font-size: 13px; line-height: 1.4; z-index: 10; }
+    #caption b { color: #9fe870; }
+    #caption code { color: #ffd479; }
+  </style>
+</head>
+<body>
+  <div id="caption">
+    <b>Cobblestone plaza via <code>addTerrainRegion</code></b><br>
+    A procedural cobblestone floor is laid at the centre of the flat region,
+    with a monument + instanced pillars via <code>addModel</code> (seated on the
+    sampled ground via <code>getGroundHeight</code>). Use the <b>☰ More menu →
+    "Jump to nearest town"</b> to teleport there. Surface is extendable with
+    <code>registerTerrainSurface</code>.
+  </div>
+  <div id="world-view">
+    <three-environment-block devicetarget="vr" scale="1" positiony="-1" camcollisions="1">
+      <three-terrain-block width="100" height="100" segments="100" scale="0.5" heightscale="45"
+        seed="town-847" color="#4a7c59" roughness="0.8" metalness="0.2"
+        noiseoctaves="6" noisepersistence="0.5" noiselacunarity="2"
+        skycolor="#87CEEB" horizoncolor="#E0F7FF" timeofday="12" timecycleduration="0"
+        positionx="0" positiony="-10" positionz="0"></three-terrain-block>
+    </three-environment-block>
+  </div>
+
+  <script src="/index_files/xr-publisher.umd.js"></script>
+  <script>
+    const { XRPublisher } = window;
+
+    // ── Configure ──────────────────────────────────────────────────────────
+    const PLAZA_SURFACE = 'cobblestone';   // built-in; or register your own (below)
+    const PLAZA_SCALE = 0.5, PLAZA_MORTAR = 0.08, PLAZA_MAX_RADIUS = 44;
+    const CENTER_MODEL_URL = 'https://items.sxp.digital/f8886983-a11b-4367-a19c-388662542d84/hut.glb';
+    const PILLAR_MODEL_URL = 'https://items.sxp.digital/f8886983-a11b-4367-a19c-388662542d84/hut.glb';
+    const CENTER_SCALE = 3.0, PILLAR_SCALE = 1.0, PILLAR_COUNT = 12;
+    // Biome field (must match biomeHelpers.ts) + centre-finding params.
+    const ELEV_FREQ = 0.0008, MOIST_FREQ = 0.001;
+    const DIRS = 12, RAY_STEP = 25, RAY_MAX = 420, CELL = 40, WIN = 7, MIN_CLEARANCE = 90;
+
+    // ── Extensibility example: register your OWN terrain surface (optional) ──
+    // Authored with the bundled TSL (XRPublisher.tsl). Set PLAZA_SURFACE to
+    // 'tinted-stone' to use it. WebGL renders it as the flat fallbackColor.
+    // const { Fn, vec4, vec3, vec2, positionWorld, mx_noise_vec3, mix, float } = XRPublisher.tsl;
+    // XRPublisher.registerTerrainSurface({
+    //   id: 'tinted-stone',
+    //   tsl: ({ worldPos, tint }) => Fn(() => {
+    //     const n = mx_noise_vec3(vec3(worldPos.x.mul(0.3), worldPos.z.mul(0.3), 0)).x.mul(0.5).add(0.5);
+    //     return vec4(vec3(0.45, 0.45, 0.5).mul(n.mul(0.4).add(0.8)).mul(tint), float(0.8));
+    //   })(),
+    //   fallbackColor: [0.45, 0.45, 0.5],
+    // });
+
+    const terrainEl = document.querySelector('three-terrain-block');
+    const terrainY = terrainEl ? (parseFloat(terrainEl.getAttribute('positiony') || '0') || 0) : 0;
+
+    // Foot-lift: glTF pivots are usually CENTRED, so origin-on-ground buries the
+    // lower half. Measure the bbox and lift by -min.y*scale so the BOTTOM rests
+    // on the placement Y. (loadModel is cached; ModelObject loads the same URL.)
+    let centerLift = 0, pillarLift = 0;
+    async function loadFootLifts() {
+      const lift = async (url, scale) => {
+        try {
+          const m = await XRPublisher.loadModel(url);
+          const box = new window.THREE.Box3().setFromObject(m);
+          return Number.isFinite(box.min.y) ? -box.min.y * scale : 0;
+        } catch (e) { return 0; }
+      };
+      centerLift = await lift(CENTER_MODEL_URL, CENTER_SCALE);
+      pillarLift = await lift(PILLAR_MODEL_URL, PILLAR_SCALE);
+    }
+    loadFootLifts();
+
+    const fieldCache = new Map();
+    function getInside(seed) {
+      let f = fieldCache.get(seed);
+      if (!f) {
+        const { alea, createNoise2D } = XRPublisher.utils;
+        const en = createNoise2D(alea(seed + '-biome-elev'));
+        const mn = createNoise2D(alea(seed + '-biome-moist'));
+        f = (x, z) => Math.min(
+          0.15 - Math.abs(en(x * ELEV_FREQ, z * ELEV_FREQ)),
+          -0.30 - mn(x * MOIST_FREQ + 1000, z * MOIST_FREQ + 1000),
+        ) > 0;
+        fieldCache.set(seed, f);
+      }
+      return f;
+    }
+    function clearance(inside, x, z) {
+      if (!inside(x, z)) return -1;
+      let min = RAY_MAX;
+      for (let k = 0; k < DIRS; k++) {
+        const a = (k / DIRS) * Math.PI * 2, cx = Math.cos(a), cz = Math.sin(a);
+        let d = RAY_STEP;
+        for (; d <= RAY_MAX; d += RAY_STEP) { if (!inside(x + cx * d, z + cz * d)) break; }
+        if (d < min) min = d;
+      }
+      return min;
+    }
+    const centerCache = new Map();
+    function findCenter(inside, sx, sz) {
+      const ck = Math.round(sx / 80) + '_' + Math.round(sz / 80);
+      if (centerCache.has(ck)) return centerCache.get(ck);
+      const bcx = Math.round(sx / CELL), bcz = Math.round(sz / CELL);
+      let best = 0, bx = null, bz = null;
+      for (let dz = -WIN; dz <= WIN; dz++)
+        for (let dx = -WIN; dx <= WIN; dx++) {
+          const v = clearance(inside, (bcx + dx) * CELL, (bcz + dz) * CELL);
+          if (v > best) { best = v; bx = bcx + dx; bz = bcz + dz; }
+        }
+      const out = (bx !== null && best >= MIN_CLEARANCE) ? [bx * CELL, bz * CELL, best] : null;
+      centerCache.set(ck, out);
+      return out;
+    }
+    const worldSeedOf = (s) => {
+      const i = s.indexOf('-decoration-town-center-');
+      return i > 0 ? s.slice(0, i) : null;
+    };
+
+    const built = new Set();
+    const towns = [];
+
+    // Seat models on the terrain with NO physics raycast. Injected models are
+    // scene-scale (outside the terrain's positionY group), so world ground Y =
+    // heightSample + terrainOffset. The probe spawn gives the height sample;
+    // the engine publishes the offset as window.__xrTerrainOffsetY. (Avoid
+    // XRPublisher.getGroundHeight — its rapier castRay re-enters/overflows far
+    // from origin / mid-generation: the teleport crash.)
+    function placeTownModels(key, cx, cz, plazaR, groundY) {
+      XRPublisher.addModel({
+        id: 'town-monument-' + key, url: CENTER_MODEL_URL,
+        position: [cx, groundY + centerLift, cz], scale: CENTER_SCALE,
+      });
+      const ringR = plazaR * 0.86, pillars = [];
+      for (let p = 0; p < PILLAR_COUNT; p++) {
+        const a = (p / PILLAR_COUNT) * Math.PI * 2;
+        const wx = cx + Math.cos(a) * ringR, wz = cz + Math.sin(a) * ringR;
+        pillars.push({ position: [wx, groundY + pillarLift, wz], scale: PILLAR_SCALE });
+      }
+      XRPublisher.addModel({ id: 'town-pillars-' + key, url: PILLAR_MODEL_URL, instances: pillars });
+      console.log('[town-center] models seated at ground Y=' + groundY.toFixed(1) + ' (' + cx + ', ' + cz + ')');
+    }
+
+    XRPublisher.registerDecoration({
+      name: 'town-center',
+      density: 4,
+      biomes: ['buildable'],
+      maxSlope: 0.12,
+      minWaterDistance: 6,
+      create(spawn) {
+        const seed = worldSeedOf(spawn.seed);
+        if (!seed) return null;
+        const inside = getInside(seed);
+        const center = findCenter(inside, spawn.worldPosition[0], spawn.worldPosition[2]);
+        if (!center) return null;
+        const [cx, cz, clr] = center;
+
+        const originX = spawn.worldPosition[0] - spawn.position[0];
+        const originZ = spawn.worldPosition[2] - spawn.position[2];
+        const width = originX / (spawn.chunkX + 0.5) || 100;
+        const height = originZ / (spawn.chunkZ + 0.5) || 100;
+        if (Math.abs(cx - originX) > Math.abs(width) / 2) return null;
+        if (Math.abs(cz - originZ) > Math.abs(height) / 2) return null;
+
+        const key = cx + '_' + cz;
+        if (built.has(key)) return null;
+        built.add(key);
+
+        const plazaR = Math.min(PLAZA_MAX_RADIUS, Math.max(16, clr * 0.85));
+        const groundOffset = (typeof window.__xrTerrainOffsetY === 'number') ? window.__xrTerrainOffsetY : terrainY;
+        const groundY = spawn.worldPosition[1] + groundOffset;
+        towns.push({ x: cx, z: cz, y: groundY });   // y → teleport's safe direct path
+
+        // 1) Cobblestone PLAZA floor (terrain surface region, XZ circle; clears grass).
+        XRPublisher.addTerrainRegion({
+          id: 'town-plaza-' + key,
+          center: [cx, cz], radius: plazaR,
+          surface: PLAZA_SURFACE, scale: PLAZA_SCALE, mortar: PLAZA_MORTAR,
+          clearGrass: true,
+        });
+        // 2 + 3) Monument + pillar ring — seated via the published terrain offset.
+        placeTownModels(key, cx, cz, plazaR, groundY);
+
+        console.log('[town-center] cobblestone plaza r=' + plazaR.toFixed(0) + ' at (' + cx + ', ' + cz + ')');
+        return null;
+      },
+    });
+
+    // "Jump to nearest town" in the HUD "More" (☰) menu — teleports the player
+    // with an EXPLICIT Y so teleportPlayer uses the safe direct-move path (no
+    // terrain raycast → no rapier BVH recursion). Hardcoded fallback (safe high
+    // Y to fall from) before discovery.
+    const HARDCODED_TOWN = { x: 14960, z: -920, y: 60 };
+    XRPublisher.registerMenuItem({
+      id: 'jump-to-nearest-town',
+      label: 'Jump to nearest town',
+      icon: '🏘️',
+      order: 50,
+      onSelect: () => {
+        const po = window.currentScene && window.currentScene.getObjectByName('playerOne');
+        let target = HARDCODED_TOWN;
+        if (towns.length > 0) {
+          target = towns[0];
+          if (po) {
+            const p = po.getWorldPosition(new window.THREE.Vector3());
+            let best = Infinity;
+            for (const t of towns) {
+              const d = (t.x - p.x) ** 2 + (t.z - p.z) ** 2;
+              if (d < best) { best = d; target = t; }
+            }
+          }
+        }
+        XRPublisher.teleportPlayer(target.x, target.y + 2, target.z);  // explicit Y → safe path
+      },
+    });
+  </script>
+</body>
+</html>

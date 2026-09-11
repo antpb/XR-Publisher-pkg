@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<!--
+  Local test harness for your plugin.
+
+  1.  npm run watch          (rebuilds dist/ on every save, UNminified)
+  2.  serve this folder's PARENT (examples/) with any static server, e.g.
+        npx serve .           # run from packages/xr-publisher/examples
+      then open  http://localhost:3000/plugin-scaffold/dev.html
+      (the runtime is loaded relative to this file — ../index_files/…)
+
+  The page renders a small procedural-terrain world and loads your built
+  plugin over it. Add ?renderer=webgl to test the WebGL path.
+
+  Cloning this scaffold OUT of the xr-publisher repo? Change RUNTIME_SRC below
+  to your instance's runtime URL (the xr-publisher.umd.js your world serves),
+  and PLUGIN_SRC if you renamed PLUGIN_SLUG in plugin.config.mjs.
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>plugin-scaffold — dev harness</title>
+  <script>
+    // Optional: point the runtime at your deployment API (needed only for
+    // networking / world-state features). Harmless to leave commented out.
+    // window.XRP_API_BASE = "https://your-instance.example.workers.dev";
+  </script>
+  <style>
+    body { margin: 0; background: #191919; color: #fff; font-family: sans-serif; }
+    #world-view { width: 100vw; height: 100vh; }
+  </style>
+</head>
+<body>
+  <div id="world-view">
+    <three-environment-block devicetarget="vr" scale="1" positiony="-1" rotationy="0" camcollisions="1">
+      <three-terrain-block
+        width="100" height="100" segments="100" scale="0.5" heightscale="50"
+        seed="plugin-scaffold-seed" color="#4a7c59" roughness="0.8" metalness="0.2"
+        noiseoctaves="6" noisepersistence="0.5" noiselacunarity="2"
+        skycolor="#87CEEB" horizoncolor="#E0F7FF" timeofday="12" timecycleduration="0"
+        positionx="0" positiony="-10" positionz="0" rotationx="0" rotationy="0" rotationz="0">
+      </three-terrain-block>
+    </three-environment-block>
+  </div>
+
+  <!-- Runtime first (window.XRPublisher + window.THREE; auto-inits the world
+       on load), then your plugin. Relative path resolves the runtime from the
+       sibling examples/ folder — swap for your instance URL if you cloned this
+       scaffold elsewhere; update the plugin src if you renamed PLUGIN_SLUG. -->
+  <script src="../index_files/xr-publisher.umd.js"></script>
+  <script src="./dist/my-plugin-xr-publisher-plugin.umd.js"></script>
+</body>
+</html>

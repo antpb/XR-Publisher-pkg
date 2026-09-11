@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<!--
+  DECORATION EXAMPLE — Collectible apples (interaction + HUD)
+  ----------------------------------------------------------
+  The full pipeline for a "collect things and count them" plugin:
+
+    • anchor:'tree'              → apples hang off real canopy leaves
+    • interactable + onInteract  → walk up, "Press E", collect this apple
+    • XRPublisher.registerHud    → a 2D counter drawn over the world
+
+  Roam into the grove, approach an apple until the "Press E" prompt appears,
+  press E — the apple despawns and the top-right counter ticks up.
+
+  Persistence note: spawns are deterministic, so a collected apple reappears
+  when you walk away and the chunk reloads. Track collected spawn.seeds (see
+  the commented `harvested` Set) to make collection permanent.
+
+  Run: npm run dev → /decorations/collectible-apples/
+-->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Decoration · Collectible apples</title>
+  <style>
+    body { margin: 0; background: #191919; color: #fff; font-family: sans-serif; }
+    #world-view { width: 100vw; height: 100vh; }
+    #caption { position: fixed; top: 12px; left: 12px; max-width: 380px; padding: 10px 14px;
+      background: rgba(0,0,0,0.6); border-radius: 8px; font-size: 13px; line-height: 1.4; z-index: 10; }
+    #caption b { color: #9fe870; }
+    #caption code { color: #ffd479; }
+  </style>
+</head>
+<body>
+  <div id="caption">
+    <b>Collectible apples</b><br>
+    Apples hang in the trees <i>(<code>anchor:'tree'</code>)</i> and are
+    <code>interactable</code>. Walk up to one, press <b>E</b> to collect it —
+    the counter (top-right, via <code>registerHud</code>) ticks up.
+  </div>
+  <div id="world-view">
+    <three-environment-block devicetarget="vr" scale="1" positiony="-1" camcollisions="1">
+      <three-terrain-block width="100" height="100" segments="100" scale="0.5" heightscale="45"
+        seed="ex-forest" color="#4a7c59" roughness="0.8" metalness="0.2"
+        noiseoctaves="6" noisepersistence="0.5" noiselacunarity="2"
+        skycolor="#87CEEB" horizoncolor="#E0F7FF" timeofday="13" timecycleduration="0"
+        positionx="0" positiony="-10" positionz="0"></three-terrain-block>
+    </three-environment-block>
+  </div>
+
+  <script src="/index_files/xr-publisher.umd.js"></script>
+  <script>
+    const { XRPublisher, THREE } = window;
+
+    // ── HUD: a collected-apple counter (top-right). The plugin owns this DOM
+    // node and updates it directly — no React, no store. ──
+    let collected = 0;
+    const hud = document.createElement('div');
+    Object.assign(hud.style, {
+      padding: '8px 14px', background: 'rgba(15,15,20,0.82)', color: '#f5f5f7',
+      border: '1px solid rgba(255,255,255,0.18)', borderRadius: '10px',
+      font: '600 15px system-ui, sans-serif',
+    });
+    const renderHud = () => { hud.textContent = `🍎 ${collected}`; };
+    renderHud();
+    XRPublisher.registerHud('apple-counter', hud, 'top-right');
+
+    // Shared materials/geometry — create() runs once per tree.
+    const appleMat = new THREE.MeshStandardMaterial({ color: 0xd11f1f, roughness: 0.45 });
+    const stemMat  = new THREE.MeshStandardMaterial({ color: 0x5a3a1a, roughness: 0.9 });
+    const appleR   = 0.16;
+    const appleGeo = new THREE.SphereGeometry(appleR, 14, 10);
+    // Cord LENGTH must clear the canopy's leaf-card shell, exactly like the
+    // canopy-lanterns plugin — the anchor (local y=0) sits ON the blob surface,
+    // and the leaf quads extend a bit past it, so a shallow hang buries the
+    // object IN the foliage. Drop the apple a short cord below so it dangles
+    // clear and reads as attached + hanging.
+    const cord = 0.22;
+    const stemGeo = new THREE.CylinderGeometry(0.012, 0.012, cord, 4);
+
+    // const harvested = new Set();  // ← uncomment (+ the two lines below) for
+                                     //    permanent collection across reloads.
+
+    XRPublisher.registerDecoration({
+      name: 'tree-apple',
+      anchor: 'tree',                 // hang on the canopy underside (local y=0 = leaf)
+      density: 0.6,                   // ~60% of trees bear an apple
+      interactable: true,             // ← "Press E to interact"
+      interactionPrompt: 'collect apple',
+      interactionRadius: 3.5,
+      create(spawn) {
+        // if (harvested.has(spawn.seed)) return null;
+        const g = new THREE.Group();
+        const stem = new THREE.Mesh(stemGeo, stemMat);
+        stem.position.y = -cord / 2;          // top at the leaf surface (y=0)
+        const apple = new THREE.Mesh(appleGeo, appleMat);
+        apple.position.y = -cord - appleR;    // ≈ -0.38, hanging clear of the leaves
+        apple.scale.y = 0.92;
+        apple.castShadow = true;
+        g.add(stem, apple);
+        return g;
+      },
+      onInteract({ spawn, remove }) {
+        collected += 1;
+        renderHud();
+        // harvested.add(spawn.seed);
+        remove();                     // despawn this apple
+      },
+    });
+  </script>
+</body>
+</html>
