@@ -1,0 +1,121 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "three-model-block",
+  "title": "Model Block",
+  "description": "Add 3D models (GLB/GLTF/VRM) to the environment with full transform controls and physics options.",
+  "type": "object",
+  "required": ["threeobjecturl"],
+  "properties": {
+    "threeobjecturl": {
+      "type": "string",
+      "description": "URL to the 3D model file (GLB, GLTF, or VRM format)"
+    },
+    "positionx": {
+      "type": "number",
+      "default": 0,
+      "description": "X position in world space"
+    },
+    "positiony": {
+      "type": "number",
+      "default": 0,
+      "description": "Y position in world space"
+    },
+    "positionz": {
+      "type": "number",
+      "default": 0,
+      "description": "Z position in world space"
+    },
+    "rotationx": {
+      "type": "number",
+      "default": 0,
+      "description": "Rotation around X axis in DEGREES — this block converts degrees to radians at runtime, unlike most blocks which take radians directly"
+    },
+    "rotationy": {
+      "type": "number",
+      "default": 0,
+      "description": "Rotation around Y axis in DEGREES — this block converts degrees to radians at runtime, unlike most blocks which take radians directly"
+    },
+    "rotationz": {
+      "type": "number",
+      "default": 0,
+      "description": "Rotation around Z axis in DEGREES — this block converts degrees to radians at runtime, unlike most blocks which take radians directly"
+    },
+    "scalex": {
+      "type": "number",
+      "default": 1,
+      "description": "Scale factor on X axis"
+    },
+    "scaley": {
+      "type": "number",
+      "default": 1,
+      "description": "Scale factor on Y axis"
+    },
+    "scalez": {
+      "type": "number",
+      "default": 1,
+      "description": "Scale factor on Z axis"
+    },
+    "animations": {
+      "type": "string",
+      "description": "Comma-separated list of animation names to play"
+    },
+    "alt": {
+      "type": "string",
+      "description": "Alternative text description for accessibility"
+    },
+    "collidable": {
+      "type": "string",
+      "enum": ["0", "1"],
+      "default": "0",
+      "description": "Enable (1) or disable (0) physics collisions"
+    },
+    "instanced": {
+      "type": "string",
+      "enum": ["true", "false"],
+      "default": "false",
+      "description": "Enable instanced rendering for multiple copies"
+    },
+    "instances": {
+      "type": "string",
+      "description": "JSON array of instance transform data for instanced models"
+    },
+    "proximityload": {
+      "type": "string",
+      "enum": ["0", "1"],
+      "default": "0",
+      "description": "Enable (1) to only load model when player is within trigger zone"
+    },
+    "triggerlocationx": {
+      "type": "number",
+      "default": 0,
+      "description": "Width of the proximity trigger zone (0 = disabled)"
+    },
+    "triggerlocationy": {
+      "type": "number",
+      "default": 0,
+      "description": "Height of the proximity trigger zone (0 = disabled)"
+    },
+    "triggerlocationz": {
+      "type": "number",
+      "default": 0,
+      "description": "Depth of the proximity trigger zone (0 = disabled)"
+    },
+    "triggerlocationposx": {
+      "type": "number",
+      "default": 0,
+      "description": "X offset of the trigger zone from model position"
+    },
+    "triggerlocationposy": {
+      "type": "number",
+      "default": 0,
+      "description": "Y offset of the trigger zone from model position"
+    },
+    "triggerlocationposz": {
+      "type": "number",
+      "default": 0,
+      "description": "Z offset of the trigger zone from model position"
+    }
+  },
+  "additionalProperties": false
+}
+

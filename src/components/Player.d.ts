@@ -1,5 +1,5 @@
 import { ReactNode, MutableRefObject } from 'react';
-import { Vector3, Quaternion } from 'three';
+import { Vector3, Quaternion, Object3D } from 'three';
 
 export interface PlayerProps {
   spawnPoint: [number, number, number];
@@ -18,6 +18,10 @@ export interface PlayerProps {
   defaultAvatarVRM?: string;
   camCollisions?: string;
   p2pcf?: any;
+  useWebGLForXR?: boolean;
+  waterLevel?: number;
+  isXRPresenting?: boolean;
+  xrOrigin?: Object3D;
 }
 
 export default function Player(props: PlayerProps): JSX.Element;

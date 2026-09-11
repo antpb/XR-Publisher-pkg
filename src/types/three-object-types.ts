@@ -1,9 +1,8 @@
 // three-object-types.ts
-import { Props } from '@react-three/fiber';
+import { CanvasProps } from '@react-three/fiber';
 import { Vector3 } from 'three';
 import type { GLTF } from 'three/examples/jsm/loaders/GLTFLoader';
 import type { VRM } from '@pixiv/three-vrm';
-import type { VRMCVRM } from '@pixiv/types-vrmc-vrm-1.0';
 import React from 'react';
 
 // Define OrbitControls interface to match your needs
@@ -46,12 +45,12 @@ export interface GLTFWithVRM extends GLTF {
 	userData: {
 		vrm?: VRM;
 		gltfExtensions?: {
-			VRM?: VRMCVRM;
+			VRM?: any; // VRM 1.0 extension data (VRMC_vrm schema)
 		};
 	};
 }
 
-export interface CanvasComponentProps extends Props {
+export interface CanvasComponentProps extends CanvasProps {
 	camera?: {
 		fov: number;
 		zoom: number;

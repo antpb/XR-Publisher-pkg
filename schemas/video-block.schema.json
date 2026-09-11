@@ -1,0 +1,91 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "three-video-block",
+  "title": "Video Block",
+  "description": "Add video planes or video-textured models to the environment.",
+  "type": "object",
+  "required": ["videourl"],
+  "properties": {
+    "videourl": {
+      "type": "string",
+      "description": "URL to the video file (MP4, WebM formats)"
+    },
+    "aspectwidth": {
+      "type": "number",
+      "default": 16,
+      "description": "Aspect ratio width component"
+    },
+    "aspectheight": {
+      "type": "number",
+      "default": 9,
+      "description": "Aspect ratio height component"
+    },
+    "autoplay": {
+      "type": "string",
+      "enum": ["0", "1"],
+      "default": "0",
+      "description": "Auto-play on load (1) or wait for interaction (0)"
+    },
+    "custommodel": {
+      "type": "string",
+      "description": "URL to custom model to apply video texture"
+    },
+    "modelurl": {
+      "type": "string",
+      "description": "URL to model for video screen (alternative to custommodel)"
+    },
+    "videocontrolsenabled": {
+      "type": "string",
+      "enum": ["0", "1"],
+      "default": "0",
+      "description": "Show (1) or hide (0) video playback controls"
+    },
+    "positionx": {
+      "type": "number",
+      "default": 0,
+      "description": "X position in world space"
+    },
+    "positiony": {
+      "type": "number",
+      "default": 0,
+      "description": "Y position in world space"
+    },
+    "positionz": {
+      "type": "number",
+      "default": 0,
+      "description": "Z position in world space"
+    },
+    "rotationx": {
+      "type": "number",
+      "default": 0,
+      "description": "Rotation around X axis (in radians)"
+    },
+    "rotationy": {
+      "type": "number",
+      "default": 0,
+      "description": "Rotation around Y axis (in radians)"
+    },
+    "rotationz": {
+      "type": "number",
+      "default": 0,
+      "description": "Rotation around Z axis (in radians)"
+    },
+    "scalex": {
+      "type": "number",
+      "default": 1,
+      "description": "Scale factor on X axis"
+    },
+    "scaley": {
+      "type": "number",
+      "default": 1,
+      "description": "Scale factor on Y axis"
+    },
+    "scalez": {
+      "type": "number",
+      "default": 1,
+      "description": "Scale factor on Z axis"
+    }
+  },
+  "additionalProperties": false
+}
+

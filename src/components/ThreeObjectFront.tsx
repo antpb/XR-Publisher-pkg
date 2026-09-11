@@ -8,8 +8,8 @@ import { USDZLoader } from 'three/examples/jsm/loaders/USDZLoader';
 import { GLTFGoogleTiltBrushMaterialExtension } from "three-icosa";
 import { useAnimations } from '@react-three/drei';
 import { Physics, RigidBody } from "@react-three/rapier";
-import { Hands } from '@react-three/xr';
-import { VRMUtils, VRMLoaderPlugin, VRMHumanBoneName } from "@pixiv/three-vrm";
+import { VRMUtils, VRMHumanBoneName } from "@pixiv/three-vrm";
+import { createVRMLoaderPlugin } from "../utils/vrmLoader";
 import type { VRM, VRMHumanoid } from '@pixiv/three-vrm';
 import { Object3D, AnimationClip, AnimationMixer, Vector3, Quaternion, QuaternionKeyframeTrack, VectorKeyframeTrack, AudioListener } from 'three';
 
@@ -102,16 +102,16 @@ const mixamoVRMRigMap: Record<string, string> = {
 async function loadMixamoAnimation(
 	url: string,
 	vrm: VRM,
-	positionY: number,
-	positionX: number,
-	positionZ: number,
-	scaleX: number,
-	scaleY: number,
-	scaleZ: number,
-	rotationX: number = 0,
-	rotationY: number = 0,
-	rotationZ: number = 0,
-	rotationW: number = 1
+	_positionY: number,
+	_positionX: number,
+	_positionZ: number,
+	_scaleX: number,
+	_scaleY: number,
+	_scaleZ: number,
+	_rotationX: number = 0,
+	_rotationY: number = 0,
+	_rotationZ: number = 0,
+	_rotationW: number = 1
 ): Promise<AnimationClip> {
 	const loader = new FBXLoader();
 	return loader.loadAsync(url).then((asset) => {
@@ -191,8 +191,6 @@ function SavedObject({ orbitRef, ...props }: SavedObjectProps) {
 	const idleFile = useState(idle);
 	const { clock } = useThree();
 	const [url, setUrl] = useState(props.url);
-	console.log('props.url', props.url);
-	console.log("idleFile", idleFile);
 
 	useEffect(() => {
 		const timer = setTimeout(() => setUrl(props.url), 2000);
@@ -218,8 +216,10 @@ function SavedObject({ orbitRef, ...props }: SavedObjectProps) {
 		(loader) => {
 			if (openbrushEnabled) {
 				loader.register(
+					// three-icosa's plugin predates the `name` field on
+					// GLTFLoaderPlugin; fine at runtime, missing in typings.
 					(parser) =>
-						new GLTFGoogleTiltBrushMaterialExtension(parser, openbrushDirectory)
+						new GLTFGoogleTiltBrushMaterialExtension(parser, openbrushDirectory) as any
 				);
 			}
 
@@ -237,7 +237,7 @@ function SavedObject({ orbitRef, ...props }: SavedObjectProps) {
 			loader.register(
 				(parser) => new GLTFAudioEmitterExtension(parser, listener)
 			);
-			loader.register(parser => new VRMLoaderPlugin(parser));
+			loader.register(parser => createVRMLoaderPlugin(parser));
 		}
 	);
 
@@ -307,7 +307,7 @@ function SavedObject({ orbitRef, ...props }: SavedObjectProps) {
 
 			if (props.defaultAvatarAnimation) {
 				// split the animation string by commas
-				let animationsFinal = props.defaultAvatarAnimation.split(',');
+				const animationsFinal = props.defaultAvatarAnimation.split(',');
 				if( animationsFinal[0] !== "" ) {
 					loadAnimation(props.defaultAvatarAnimation[0]);
 				}
@@ -370,7 +370,6 @@ export default function ThreeObjectFront(props: ThreeObjectFrontProps) {
 						width: '90%',
 					}}
 				>
-					<Hands />
 					<ambientLight intensity={0.9} />
 					<directionalLight
 						intensity={0.4}

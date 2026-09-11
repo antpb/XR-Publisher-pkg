@@ -1,0 +1,153 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "three-terrain-block",
+  "title": "Terrain Block",
+  "description": "Generate procedural infinite terrain with customizable noise parameters, sky, and atmospheric effects.",
+  "type": "object",
+  "properties": {
+    "width": {
+      "type": "number",
+      "default": 100,
+      "description": "Width of each terrain chunk"
+    },
+    "height": {
+      "type": "number",
+      "default": 100,
+      "description": "Height (depth) of each terrain chunk"
+    },
+    "segments": {
+      "type": "number",
+      "default": 100,
+      "description": "Number of geometry segments for terrain detail"
+    },
+    "scale": {
+      "type": "number",
+      "default": 0.5,
+      "description": "Noise scale factor for terrain features"
+    },
+    "heightscale": {
+      "type": "number",
+      "default": 50,
+      "description": "Vertical scale multiplier for terrain height"
+    },
+    "seed": {
+      "type": "string",
+      "description": "Random seed for consistent terrain generation"
+    },
+    "positiony": {
+      "type": "number",
+      "default": -10,
+      "description": "Base Y position of the terrain"
+    },
+    "rotationx": {
+      "type": "number",
+      "default": 0,
+      "description": "Rotation around X axis (in radians)"
+    },
+    "rotationy": {
+      "type": "number",
+      "default": 0,
+      "description": "Rotation around Y axis (in radians)"
+    },
+    "rotationz": {
+      "type": "number",
+      "default": 0,
+      "description": "Rotation around Z axis (in radians)"
+    },
+    "color": {
+      "type": "string",
+      "default": "#4a7c59",
+      "description": "Base terrain color in hex format"
+    },
+    "roughness": {
+      "type": "number",
+      "default": 0.8,
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Material roughness (0 = smooth/reflective, 1 = rough/matte)"
+    },
+    "metalness": {
+      "type": "number",
+      "default": 0.2,
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Material metalness (0 = non-metal, 1 = metal)"
+    },
+    "noiseoctaves": {
+      "type": "number",
+      "default": 6,
+      "description": "Number of noise octaves for terrain detail"
+    },
+    "noisepersistence": {
+      "type": "number",
+      "default": 0.5,
+      "description": "Noise persistence (amplitude reduction per octave)"
+    },
+    "noiselacunarity": {
+      "type": "number",
+      "default": 2,
+      "description": "Noise lacunarity (frequency multiplier per octave)"
+    },
+    "skycolor": {
+      "type": "string",
+      "default": "#87CEEB",
+      "description": "Sky color at zenith in hex format"
+    },
+    "horizoncolor": {
+      "type": "string",
+      "default": "#E0F7FF",
+      "description": "Sky color at horizon in hex format"
+    },
+    "cloudcolor": {
+      "type": "string",
+      "default": "#ffffff",
+      "description": "Cloud color in hex format"
+    },
+    "clouddensity": {
+      "type": "number",
+      "default": 0.5,
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Cloud coverage density"
+    },
+    "cloudscale": {
+      "type": "number",
+      "default": 1,
+      "description": "Scale of cloud patterns"
+    },
+    "cloudspeed": {
+      "type": "number",
+      "default": 0.1,
+      "description": "Cloud movement speed"
+    },
+    "cloudheight": {
+      "type": "number",
+      "default": 100,
+      "description": "Height of the cloud layer"
+    },
+    "cloudlayers": {
+      "type": "number",
+      "default": 3,
+      "description": "Number of cloud layers for depth effect"
+    },
+    "timeofday": {
+      "type": "number",
+      "default": 12,
+      "minimum": 0,
+      "maximum": 24,
+      "description": "Time of day in 24-hour format (affects lighting)"
+    },
+    "timecycleduration": {
+      "type": "number",
+      "default": 0,
+      "description": "Duration of full day/night cycle in seconds (0 = disabled)"
+    },
+    "renderdistance": {
+      "type": "number",
+      "default": 2,
+      "description": "Number of terrain chunks to render around the player (2 = 5x5 grid). Clamped to 1-5; flying high adds one extra ring. Higher values multiply chunk, decoration and collider cost quadratically."
+    }
+  },
+  "additionalProperties": false
+}
+

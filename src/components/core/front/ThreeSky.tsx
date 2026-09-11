@@ -51,11 +51,27 @@ export function ThreeSky(sky : ThreeSkyProps) {
 	}
 
 	if(skyUrl === "" || skyUrl === undefined || skyUrl === null) {
+		// Defaults matter here: an absent attribute reads as null, and
+		// `Number(null)` is 0 — a sky at distance 0 with the sun at the origin
+		// renders as a degenerate black dome. These match schemas/
+		// sky-block.schema.json, so a bare <three-sky-block> looks like a sky.
+		// (This block was never rendered at all until the auto-init path
+		// stopped hardcoding `sky: ''`, so partial attributes were never
+		// exercised before.)
+		const numOr = (v: string | null | undefined, dflt: number) => {
+			if (v === null || v === undefined || v === '') return dflt;
+			const n = Number(v);
+			return Number.isFinite(n) ? n : dflt;
+		};
 		return (
 			<Sky
-			distance={Number(distance)}
-			sunPosition={[Number(sunPositionX), Number(sunPositionY), Number(sunPositionZ)]}
-			rayleigh={rayleigh}
+			distance={numOr(distance, 170000)}
+			sunPosition={[
+				numOr(sunPositionX, 0),
+				numOr(sunPositionY, 1),
+				numOr(sunPositionZ, -10000),
+			]}
+			rayleigh={numOr(rayleigh, 1)}
 		/>
 		);
 	} else {

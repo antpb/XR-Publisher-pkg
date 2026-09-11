@@ -221,7 +221,7 @@ export default class P2PCF extends EventEmitter {
 			options.rtcPeerConnectionProprietaryConstraints || {};
 		this.peerSdpTransform = options.sdpTransform || ((sdp) => sdp);
 		this.workerUrl =
-			options.workerUrl[0] || "https://p2pcf.sxp.digital";
+			options.workerUrl || "https://p2pcf.sxp.digital";
 
 		if (this.workerUrl.endsWith("/")) {
 			this.workerUrl = this.workerUrl.substring(
@@ -229,7 +229,6 @@ export default class P2PCF extends EventEmitter {
 				this.workerUrl.length - 1
 			);
 		}
-		console.log("workerUrl", options.workerUrl);
 
 		this.stunIceServers = options.stunIceServers || DEFAULT_STUN_ICE;
 		this.turnIceServers = options.turnIceServers || DEFAULT_TURN_ICE;
@@ -855,8 +854,8 @@ export default class P2PCF extends EventEmitter {
 		this.reflexiveIps = reflexiveIps;
 		this.dtlsFingerprint = dtlsFingerprint;
 
-		let guestDefaultAvatar = defaultAvatar.length > 0 ? defaultAvatar : defaultVRM;
-		this.playerVRM = userData.playerVRM ? userData.playerVRM : guestDefaultAvatar;
+		let guestDefaultAvatar = props.playerVRM && props.playerVRM.length > 0 ? props.playerVRM : defaultVRM;
+		this.playerVRM = window.userData?.playerVRM ? window.userData.playerVRM : guestDefaultAvatar;
 
 		this.networkSettingsInterval = setInterval(async () => {
 			const [
@@ -1198,7 +1197,6 @@ export default class P2PCF extends EventEmitter {
 		const u8 = new Uint8Array(msg, SIGNAL_MESSAGE_HEADER_WORDS.length * 2);
 
 		let payload = arrToText(u8);
-		console.log("payload", payload);
 
 		// Might have a trailing byte
 		if (payload.endsWith("\0")) {
@@ -1342,9 +1340,7 @@ export default class P2PCF extends EventEmitter {
 			// console.log(p2pcf.peers.size, "peers connected", p2pcf.peers);
 			let roomCount = p2pcf.peers.size;
 			var limit = parseInt(participantLimit);
-			console.log("roomCount", roomCount, "limit", limit);
 			if( roomCount < limit ) {
-				console.log("clean room entry", p2pcf);
 				this.emit("peerconnect", peer);
 				// after connecting, send the player data to participant
 				const playerData = { playerVRM: this.playerVRM, inWorldName: userData.inWorldName, profileImage: userData.profileImage};
@@ -1355,10 +1351,8 @@ export default class P2PCF extends EventEmitter {
 				removeInPlace(this.packages, (pkg) => pkg[0] === peer.id);
 				this._updateConnectedSessions();
 			} else {
-				console.log("participants", "FULLLLLL");
 				if(! validlyInRoom ) {
-					console.log("participants are", window.participants);
-					console.log("room is full", this.roomId, p2pcf);
+					console.warn("room is full", this.roomId);
 					// if there are more than 2 participants, disconnect the peer increment the room id and retry
 					// Remove packages for the peer once connected
 					// removeInPlace(this.packages, (pkg) => pkg[0] === peer.id);

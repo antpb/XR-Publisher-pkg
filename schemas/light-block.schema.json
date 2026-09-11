@@ -1,0 +1,136 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "three-light-block",
+  "title": "Light Block",
+  "description": "Add various light sources to illuminate the environment.",
+  "type": "object",
+  "required": ["type"],
+  "properties": {
+    "type": {
+      "type": "string",
+      "enum": ["ambient", "directional", "point", "spot"],
+      "default": "ambient",
+      "description": "Type of light source"
+    },
+    "color": {
+      "type": "string",
+      "default": "#ffffff",
+      "description": "Light color in hex format"
+    },
+    "intensity": {
+      "type": "number",
+      "default": 1,
+      "description": "Light intensity/brightness"
+    },
+    "distance": {
+      "type": "number",
+      "default": 0,
+      "description": "Maximum range of the light (point and spot lights only, 0 = infinite)"
+    },
+    "decay": {
+      "type": "number",
+      "default": 2,
+      "description": "Light falloff rate (point and spot lights only)"
+    },
+    "angle": {
+      "type": "number",
+      "default": 0.5235987756,
+      "description": "Spotlight cone angle in radians (spot light only)"
+    },
+    "penumbra": {
+      "type": "number",
+      "default": 0,
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Spotlight edge softness (spot light only)"
+    },
+    "castshadow": {
+      "type": "string",
+      "enum": ["true", "false"],
+      "default": "false",
+      "description": "Enable shadow casting (directional, spot and point lights). Each shadow-casting light adds a shadow-map pass every frame — use sparingly."
+    },
+    "shadowmapsize": {
+      "type": "number",
+      "default": 1024,
+      "description": "Shadow map resolution"
+    },
+    "shadowradius": {
+      "type": "number",
+      "default": 1,
+      "description": "Shadow blur radius"
+    },
+    "shadowbias": {
+      "type": "number",
+      "default": -0.0005,
+      "description": "Shadow bias to prevent artifacts"
+    },
+    "shadownormalbias": {
+      "type": "number",
+      "default": 0.02,
+      "description": "Shadow normal bias"
+    },
+    "shadowcamerafar": {
+      "type": "number",
+      "default": 80,
+      "description": "Shadow camera far plane"
+    },
+    "shadowcameranear": {
+      "type": "number",
+      "default": 0.5,
+      "description": "Shadow camera near plane"
+    },
+    "shadowcameraleft": {
+      "type": "number",
+      "default": -25,
+      "description": "Shadow camera left boundary"
+    },
+    "shadowcameraright": {
+      "type": "number",
+      "default": 25,
+      "description": "Shadow camera right boundary"
+    },
+    "shadowcameratop": {
+      "type": "number",
+      "default": 25,
+      "description": "Shadow camera top boundary"
+    },
+    "shadowcamerabottom": {
+      "type": "number",
+      "default": -25,
+      "description": "Shadow camera bottom boundary"
+    },
+    "positionx": {
+      "type": "number",
+      "default": 0,
+      "description": "X position in world space"
+    },
+    "positiony": {
+      "type": "number",
+      "default": 0,
+      "description": "Y position in world space"
+    },
+    "positionz": {
+      "type": "number",
+      "default": 0,
+      "description": "Z position in world space"
+    },
+    "rotationx": {
+      "type": "number",
+      "default": 0,
+      "description": "Rotation around X axis in DEGREES — this block converts degrees to radians at runtime, unlike most blocks which take radians directly"
+    },
+    "rotationy": {
+      "type": "number",
+      "default": 0,
+      "description": "Rotation around Y axis in DEGREES — this block converts degrees to radians at runtime, unlike most blocks which take radians directly"
+    },
+    "rotationz": {
+      "type": "number",
+      "default": 0,
+      "description": "Rotation around Z axis in DEGREES — this block converts degrees to radians at runtime, unlike most blocks which take radians directly"
+    }
+  },
+  "additionalProperties": false
+}
+

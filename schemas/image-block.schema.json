@@ -1,0 +1,77 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "three-image-block",
+  "title": "Image Block",
+  "description": "Add 2D image planes to the 3D environment.",
+  "type": "object",
+  "required": ["imageurl"],
+  "properties": {
+    "imageurl": {
+      "type": "string",
+      "description": "URL to the image file (PNG, JPG, WebP formats)"
+    },
+    "aspectwidth": {
+      "type": "number",
+      "default": 1,
+      "description": "Aspect ratio width component"
+    },
+    "aspectheight": {
+      "type": "number",
+      "default": 1,
+      "description": "Aspect ratio height component"
+    },
+    "transparent": {
+      "type": "string",
+      "enum": ["true", "false"],
+      "default": "false",
+      "description": "Enable transparency for PNG images with alpha channel"
+    },
+    "positionx": {
+      "type": "number",
+      "default": 0,
+      "description": "X position in world space"
+    },
+    "positiony": {
+      "type": "number",
+      "default": 0,
+      "description": "Y position in world space"
+    },
+    "positionz": {
+      "type": "number",
+      "default": 0,
+      "description": "Z position in world space"
+    },
+    "rotationx": {
+      "type": "number",
+      "default": 0,
+      "description": "Rotation around X axis (in radians)"
+    },
+    "rotationy": {
+      "type": "number",
+      "default": 0,
+      "description": "Rotation around Y axis (in radians)"
+    },
+    "rotationz": {
+      "type": "number",
+      "default": 0,
+      "description": "Rotation around Z axis (in radians)"
+    },
+    "scalex": {
+      "type": "number",
+      "default": 1,
+      "description": "Scale factor on X axis"
+    },
+    "scaley": {
+      "type": "number",
+      "default": 1,
+      "description": "Scale factor on Y axis"
+    },
+    "scalez": {
+      "type": "number",
+      "default": 1,
+      "description": "Scale factor on Z axis"
+    }
+  },
+  "additionalProperties": false
+}
+

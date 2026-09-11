@@ -1,0 +1,79 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "three-npc-block",
+  "title": "NPC Block",
+  "description": "Add interactive AI-powered non-player characters with conversation capabilities.",
+  "type": "object",
+  "required": ["threeobjecturl", "name"],
+  "properties": {
+    "threeobjecturl": {
+      "type": "string",
+      "description": "URL to the NPC avatar model (VRM format recommended)"
+    },
+    "name": {
+      "type": "string",
+      "description": "Display name of the NPC"
+    },
+    "defaultmessage": {
+      "type": "string",
+      "description": "Initial greeting message shown when player approaches"
+    },
+    "personality": {
+      "type": "string",
+      "description": "Personality description for AI conversation context"
+    },
+    "objectawareness": {
+      "type": "string",
+      "enum": ["0", "1"],
+      "default": "0",
+      "description": "Enable (1) NPC awareness of objects in the environment"
+    },
+    "positionx": {
+      "type": "number",
+      "default": 0,
+      "description": "X position in world space"
+    },
+    "positiony": {
+      "type": "number",
+      "default": 0,
+      "description": "Y position in world space"
+    },
+    "positionz": {
+      "type": "number",
+      "default": 0,
+      "description": "Z position in world space"
+    },
+    "rotationx": {
+      "type": "number",
+      "default": 0,
+      "description": "Rotation around X axis (in radians)"
+    },
+    "rotationy": {
+      "type": "number",
+      "default": 0,
+      "description": "Rotation around Y axis (in radians)"
+    },
+    "rotationz": {
+      "type": "number",
+      "default": 0,
+      "description": "Rotation around Z axis (in radians)"
+    },
+    "scalex": {
+      "type": "number",
+      "default": 1,
+      "description": "Scale factor on X axis"
+    },
+    "scaley": {
+      "type": "number",
+      "default": 1,
+      "description": "Scale factor on Y axis"
+    },
+    "scalez": {
+      "type": "number",
+      "default": 1,
+      "description": "Scale factor on Z axis"
+    }
+  },
+  "additionalProperties": false
+}
+

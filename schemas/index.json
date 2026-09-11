@@ -1,0 +1,101 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "XR Publisher Block Schemas",
+  "description": "Index of all available block schemas for XR Publisher",
+  "version": "1.0.0",
+  "blocks": [
+    {
+      "name": "three-environment-block",
+      "file": "environment-block.schema.json",
+      "description": "Main container for 3D world environments",
+      "category": "core"
+    },
+    {
+      "name": "three-model-block",
+      "file": "model-block.schema.json",
+      "description": "3D models with full transform and physics support",
+      "category": "objects"
+    },
+    {
+      "name": "three-npc-block",
+      "file": "npc-block.schema.json",
+      "description": "AI-powered interactive NPCs",
+      "category": "interactive"
+    },
+    {
+      "name": "three-portal-block",
+      "file": "portal-block.schema.json",
+      "description": "Teleportation and navigation points",
+      "category": "interactive"
+    },
+    {
+      "name": "three-rideable-block",
+      "file": "rideable-block.schema.json",
+      "description": "Rideable vehicles (cars, bikes, flying, hovering, animals, trains, coasters) mounted with E",
+      "category": "interactive"
+    },
+    {
+      "name": "three-audio-block",
+      "file": "audio-block.schema.json",
+      "description": "Spatial and ambient audio sources",
+      "category": "media"
+    },
+    {
+      "name": "three-video-block",
+      "file": "video-block.schema.json",
+      "description": "Video planes and video-textured models",
+      "category": "media"
+    },
+    {
+      "name": "three-image-block",
+      "file": "image-block.schema.json",
+      "description": "2D image planes",
+      "category": "media"
+    },
+    {
+      "name": "three-light-block",
+      "file": "light-block.schema.json",
+      "description": "Various light source types",
+      "category": "environment"
+    },
+    {
+      "name": "three-text-block",
+      "file": "text-block.schema.json",
+      "description": "3D text elements",
+      "category": "objects"
+    },
+    {
+      "name": "three-sky-block",
+      "file": "sky-block.schema.json",
+      "description": "Skybox and atmospheric configuration",
+      "category": "environment"
+    },
+    {
+      "name": "three-terrain-block",
+      "file": "terrain-block.schema.json",
+      "description": "Procedural infinite terrain generation",
+      "category": "environment"
+    },
+    {
+      "name": "three-networking-block",
+      "file": "networking-block.schema.json",
+      "description": "Multiplayer networking configuration",
+      "category": "system"
+    },
+    {
+      "name": "three-spawn-point-block",
+      "file": "spawn-point-block.schema.json",
+      "description": "Player spawn location definition",
+      "category": "system"
+    }
+  ],
+  "categories": {
+    "core": "Essential container blocks",
+    "objects": "3D object and content blocks",
+    "media": "Audio, video, and image blocks",
+    "interactive": "Player interaction blocks",
+    "environment": "World environment and atmosphere blocks",
+    "system": "System and networking configuration blocks"
+  }
+}
+

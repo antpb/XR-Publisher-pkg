@@ -10,7 +10,7 @@ import { ThreeImageProps } from "./ThreeImage.d";
  *
  * @return {JSX.Element} The image.
  */
-export function ThreeImage(props: ThreeImageProps): JSX.Element {
+export function ThreeImage(props: ThreeImageProps): React.JSX.Element {
 	const texture2 = useLoader(TextureLoader, props.url);
 	
 	return (

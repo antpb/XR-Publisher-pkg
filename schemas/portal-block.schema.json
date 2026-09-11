@@ -1,0 +1,111 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "three-portal-block",
+  "title": "Portal Block",
+  "description": "Create teleportation points that transport players to other locations or URLs.",
+  "type": "object",
+  "required": ["destinationurl"],
+  "properties": {
+    "threeobjecturl": {
+      "type": "string",
+      "description": "URL to optional custom portal model (GLB/GLTF format)"
+    },
+    "destinationurl": {
+      "type": "string",
+      "description": "URL to navigate to when portal is activated"
+    },
+    "label": {
+      "type": "string",
+      "description": "Text label displayed above the portal"
+    },
+    "labeloffsetx": {
+      "type": "number",
+      "default": 0,
+      "description": "X offset for label position"
+    },
+    "labeloffsety": {
+      "type": "number",
+      "default": 0,
+      "description": "Y offset for label position"
+    },
+    "labeloffsetz": {
+      "type": "number",
+      "default": 0,
+      "description": "Z offset for label position"
+    },
+    "labeltextcolor": {
+      "type": "string",
+      "default": "#ffffff",
+      "description": "Color of the label text in hex format"
+    },
+    "useteleportdestination": {
+      "type": "string",
+      "enum": ["true", "false"],
+      "default": "false",
+      "description": "Use in-world teleport instead of URL navigation"
+    },
+    "teleportdestinationx": {
+      "type": "number",
+      "description": "X coordinate of in-world teleport destination"
+    },
+    "teleportdestinationy": {
+      "type": "number",
+      "description": "Y coordinate of in-world teleport destination"
+    },
+    "teleportdestinationz": {
+      "type": "number",
+      "description": "Z coordinate of in-world teleport destination"
+    },
+    "animations": {
+      "type": "string",
+      "description": "Comma-separated list of animation names to play"
+    },
+    "positionx": {
+      "type": "number",
+      "default": 0,
+      "description": "X position in world space"
+    },
+    "positiony": {
+      "type": "number",
+      "default": 0,
+      "description": "Y position in world space"
+    },
+    "positionz": {
+      "type": "number",
+      "default": 0,
+      "description": "Z position in world space"
+    },
+    "rotationx": {
+      "type": "number",
+      "default": 0,
+      "description": "Rotation around X axis (in radians)"
+    },
+    "rotationy": {
+      "type": "number",
+      "default": 0,
+      "description": "Rotation around Y axis (in radians)"
+    },
+    "rotationz": {
+      "type": "number",
+      "default": 0,
+      "description": "Rotation around Z axis (in radians)"
+    },
+    "scalex": {
+      "type": "number",
+      "default": 1,
+      "description": "Scale factor on X axis"
+    },
+    "scaley": {
+      "type": "number",
+      "default": 1,
+      "description": "Scale factor on Y axis"
+    },
+    "scalez": {
+      "type": "number",
+      "default": 1,
+      "description": "Scale factor on Z axis"
+    }
+  },
+  "additionalProperties": false
+}
+

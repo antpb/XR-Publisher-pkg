@@ -4,18 +4,21 @@ import {
 VideoTexture,
 Vector3,
 BufferGeometry,
-MeshBasicMaterial,
-MeshStandardMaterial,
 DoubleSide,
 Mesh,
+MeshBasicMaterial,
 CircleGeometry,
 AudioListener,
 AudioLoader,
 PositionalAudio,
+Object3D,
+Float32BufferAttribute,
 } from "three";
+import { MeshStandardNodeMaterial } from 'three/webgpu';
+import { texture } from 'three/tsl';
 import { RigidBody } from "@react-three/rapier";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
-import { VRMLoaderPlugin } from "@pixiv/three-vrm";
+import { createVRMLoaderPlugin } from "../../../utils/vrmLoader";
 // import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import { Select } from "@react-three/drei";
 import { ThreeVideoProps } from "./ThreeVideo.d";
@@ -45,9 +48,7 @@ const gltf = (threeVideo.customModel === "1") ? useLoader(GLTFLoader, threeVideo
 	// dracoLoader.setDecoderConfig({type: 'js'});
 	// loader.setDRACOLoader(dracoLoader);
 
-	loader.register((parser) => {
-	return new VRMLoaderPlugin(parser);
-	});
+	loader.register((parser) => createVRMLoaderPlugin(parser));
 }) : null;
 
 useEffect(() => {
@@ -91,11 +92,9 @@ useEffect(() => {
 		}
 		const videoTexture = new VideoTexture(video);
 
-		// new mesh standard material with the map texture
-		const material = new MeshStandardMaterial({
-			map: videoTexture,
-			side: DoubleSide
-		});	
+		const material = new MeshStandardNodeMaterial();
+		material.colorNode = texture(videoTexture);
+		material.side = DoubleSide;
 		(foundScreen as Mesh).material = material;
 		(foundScreen as Mesh).add(audio);
 		}
@@ -112,6 +111,11 @@ useEffect(() => {
 			new Vector3(4, 0, 0)
 		);
 		const geometry = new BufferGeometry().setFromPoints(points);
+		// Position-only geometry trips "TSL: Vertex attribute 'normal' not
+		// found" when the WebGPU pipeline compiles (same pitfall documented
+		// in WaypointRail) — give it normals + uvs.
+		geometry.computeVertexNormals();
+		geometry.setAttribute('uv', new Float32BufferAttribute([0, 0, 0, 1, 1, 0.5], 2));
 		const material = new MeshBasicMaterial({
 			color: 0x00000,
 			side: DoubleSide
@@ -143,7 +147,7 @@ useEffect(() => {
 	return (
 		<Select
 		box
-		onChangePointerUp={(e) => {
+		onChangePointerUp={(e: Object3D[]) => {
 			if(videoControlsEnabled){
 				if (e.length !== 0) {
 					setClickEvent((prevState) => !prevState);
@@ -161,7 +165,7 @@ useEffect(() => {
 				}
 			}
 		}}
-		filter={items => items}
+		filter={(items: Object3D[]) => items}
 		>
 		<group
 			userData={{ camExcludeCollision: true }}

@@ -1,0 +1,100 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "three-environment-block",
+  "title": "Environment Block",
+  "description": "The main container for a 3D world environment. This is the root element that holds all other blocks.",
+  "type": "object",
+  "properties": {
+    "threeobjecturl": {
+      "type": "string",
+      "description": "URL to the main world model file (GLB/GLTF format)"
+    },
+    "devicetarget": {
+      "type": "string",
+      "enum": [
+        "vr",
+        "ar",
+        "2D",
+        "2d"
+      ],
+      "default": "2D",
+      "description": "Target device platform for rendering. Runtime default is '2D' when the attribute is absent."
+    },
+    "scale": {
+      "type": "number",
+      "default": 1,
+      "description": "Uniform scale factor for the world model"
+    },
+    "positionx": {
+      "type": "number",
+      "default": 0,
+      "description": "X position offset for the world model. NOTE: only positiony/rotationy are read by the runtime; positionx/positionz are accepted but ignored."
+    },
+    "positiony": {
+      "type": "number",
+      "default": 0,
+      "description": "Y position offset for the world model"
+    },
+    "positionz": {
+      "type": "number",
+      "default": 0,
+      "description": "Z position offset for the world model. NOTE: only positiony/rotationy are read by the runtime; positionx/positionz are accepted but ignored."
+    },
+    "rotationy": {
+      "type": "number",
+      "default": 0,
+      "description": "Rotation around the Y axis (in radians)"
+    },
+    "animations": {
+      "type": "string",
+      "description": "Comma-separated list of animation names to play"
+    },
+    "camcollisions": {
+      "type": "string",
+      "enum": [
+        "0",
+        "1",
+        "true",
+        "false"
+      ],
+      "default": "1",
+      "description": "Enable camera collisions with the environment. ON unless set to '0' or 'false'."
+    },
+    "backgroundcolor": {
+      "type": "string",
+      "description": "Background color in hex format (e.g. #000000). The runtime also accepts the legacy spelling `bg_color`; either attribute works."
+    },
+    "threepreviewimage": {
+      "type": "string",
+      "description": "URL to preview image shown during loading. The alias `previewimage` is also accepted."
+    },
+    "hdr": {
+      "type": "string",
+      "description": "URL to HDR environment map file"
+    },
+    "haszoom": {
+      "type": "string",
+      "enum": [
+        "0",
+        "1"
+      ],
+      "default": "0",
+      "description": "Enable (1) or disable (0) zoom controls"
+    },
+    "hastip": {
+      "type": "string",
+      "enum": [
+        "0",
+        "1"
+      ],
+      "default": "1",
+      "description": "Show (1) or hide (0) the interaction tip. Shown unless explicitly set to '0'."
+    },
+    "zoom": {
+      "type": "number",
+      "default": 90,
+      "description": "Camera field of view in degrees for the flatscreen view."
+    }
+  },
+  "additionalProperties": false
+}

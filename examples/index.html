@@ -1,6 +1,13 @@
 <!DOCTYPE html>
 <!-- saved from url=(0093)https://xr-publisher.sxpdigital.workers.dev/directory/antpb/Scene?aayyyyyyasasdfadsioijkjkjkj -->
-<html lang="en"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<html lang="en"><head>
+	<script>
+		// Dev harness only: point the runtime at the deployment API. The
+		// package itself ships with no baked-in host (published worlds
+		// resolve their own origin).
+		window.XRP_API_BASE = "https://xr-publisher.sxpdigital.workers.dev";
+	</script>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
         <title>Scene by antpb</title>
 		<link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet" crossorigin="anonymous">
 
@@ -63,16 +70,27 @@
             <!-- World Container -->
             <div class="world-container">
                 <div id="world-view">
-					<three-environment-block devicetarget="vr" threeobjecturl="https://items.sxp.digital/f8886983-a11b-4367-a19c-388662542d84/testworld2.glb" scale="1" positiony="-1" rotationy="0" animations="" camcollisions="1">
-						<three-networking-block participantlimit="5" customavatars="1"></three-networking-block>
-						<three-model-block threeobjecturl="https://items.sxp.digital/f8886983-a11b-4367-a19c-388662542d84/3ovcafe2.glb" scalex="1" scaley="1" scalez="1" positionx="0.01" positiony="-1" positionz="8" rotationx="0" rotationy="0" rotationz="0" animations="" collidable="1" alt=""></three-model-block>
-						<three-sky-block distance="170000" rayleigh="1" sunpositionx="0" sunpositiony="1" sunpositionz="-10000"></three-sky-block>
-					</three-environment-block>
+                    <!-- wp:xr-publisher/environment {"threeObjectUrl":"","threePreviewImage":"","scale":1,"positionY":-1,"rotationY":0,"deviceTarget":"vr","animations":"","camCollisions":"1"} -->
+                    <three-environment-block class="wp-block-xr-publisher-environment alignfull" devicetarget="vr" threeobjecturl="" threepreviewimage="" scale="1" positiony="-1" rotationy="0" animations="" camcollisions="1">
+                    <!-- wp:xr-publisher/spawn-point-block {"positionX":0,"positionY":1.3,"positionZ":-5,"rotationX":0,"rotationY":0,"rotationZ":0} -->
+                    <three-spawn-point-block class="wp-block-xr-publisher-spawn-point-block" positionx="0" positiony="1.3" positionz="-5" rotationx="0" rotationy="0" rotationz="0"></three-spawn-point-block>
+                    <!-- /wp:xr-publisher/spawn-point-block -->
+                    
+                    <!-- wp:xr-publisher/light-block {"type":"directional","color":"#ffffff","intensity":1,"distance":0,"decay":2,"angle":1.0471975511965976,"penumbra":0,"positionX":10,"positionY":20,"positionZ":10,"rotationX":-45,"rotationY":45,"rotationZ":0} -->
+                    <three-light-block class="wp-block-xr-publisher-light-block" type="directional" color="#ffffff" intensity="1" positionx="10" positiony="20" positionz="10"></three-light-block>
+                    <!-- /wp:xr-publisher/light-block -->
+                    
+                    <!-- wp:xr-publisher/terrain-block {"width":100,"height":100,"segments":100,"scale":0.5,"heightScale":50,"seed":"default-terrain-seed","positionX":0,"positionY":-10,"positionZ":0,"rotationX":0,"rotationY":0,"rotationZ":0,"color":"#4a7c59","roughness":0.8,"metalness":0.2,"noiseOctaves":6,"noisePersistence":0.5,"noiseLacunarity":2,"skyColor":"#87CEEB","horizonColor":"#E0F7FF","cloudColor":"#ffffff","cloudDensity":0.5,"cloudScale":1,"cloudSpeed":0.1,"cloudHeight":100,"cloudLayers":3,"timeOfDay":12,"timeCycleDuration":0} -->
+                    <three-terrain-block class="wp-block-xr-publisher-terrain-block" width="100" height="100" segments="100" scale="0.5" heightscale="50" seed="default-terrain-seed" color="#4a7c59" roughness="0.8" metalness="0.2" noiseoctaves="6" noisepersistence="0.5" noiselacunarity="2" skycolor="#87CEEB" horizoncolor="#E0F7FF" cloudcolor="#ffffff" clouddensity="0.5" cloudscale="1" cloudspeed="0.1" cloudheight="100" cloudlayers="3" timeofday="12" timecycleduration="0" positionx="0" positiony="-10" positionz="0" rotationx="0" rotationy="0" rotationz="0"></three-terrain-block>
+                    <!-- /wp:xr-publisher/terrain-block -->
+                    
+                    </three-environment-block>
+                    <!-- /wp:xr-publisher/environment -->
                 </div>
-            </div>
+                        </div>
 
             <!-- World Details -->
-            <div class="container mx-auto px-4 py-8">
+            <!-- <div class="container mx-auto px-4 py-8">
                 <div class="bg-[#242424] rounded-lg p-6 shadow-lg">
                     <h2 class="text-xl font-bold mb-4">About this World</h2>
                     <p class="text-gray-300 mb-4"></p>
@@ -98,10 +116,10 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </div> -->
 
             <!-- Footer -->
-            <div class="bg-black py-8">
+            <!-- <div class="bg-black py-8">
                 <div class="container mx-auto px-4 text-center text-gray-400">
                     <p>© 2024 World Publisher</p>
                     <div class="mt-2">
@@ -110,11 +128,13 @@
                         <a href="https://github.com/your-repo" class="text-purple-400 hover:underline" rel="noopener noreferrer" target="_blank">GitHub</a>
                     </div>
                 </div>
-            </div>
+            </div> -->
         </div>
 
         <!-- World Engine Script -->
-            <script>
+            <script type="module">
+                import { XRPublisher } from '../dist/xr-publisher.es.js';
+                
                 window.addEventListener('load', () => {
                     console.log('Window loaded, initializing XRPublisher');
                     const characterData = {id: 1,
@@ -203,12 +223,14 @@
                 const personalityText = JSON.stringify(personalityData);
                 console.log('url', safeCharacter.vrmUrl);
                 const environmentBlock = document.querySelector('three-environment-block');
+                // Create NPC with navcat-based pathfinding for better navigation on procedural terrain
                 const npcBlock = document.createElement('three-npc-block');
                 npcBlock.setAttribute('class', 'wp-block-xr-publisher-npc-block');
                 npcBlock.setAttribute('threeobjecturl', safeCharacter.vrmUrl);
-                npcBlock.setAttribute('positionx', '-1');
-                npcBlock.setAttribute('positiony', '0');
-                npcBlock.setAttribute('positionz', '-2');
+            // Offset NPC from player spawn to avoid overlap
+            npcBlock.setAttribute('positionx', '6');
+            npcBlock.setAttribute('positiony', '0');
+            npcBlock.setAttribute('positionz', '0');
                 npcBlock.setAttribute('rotationx', '0');
                 npcBlock.setAttribute('rotationy', '0');
                 npcBlock.setAttribute('rotationz', '0');
@@ -219,6 +241,18 @@
                 npcBlock.setAttribute('objectawareness', '0');
                 environmentBlock.appendChild(npcBlock);
                 console.log("environmentBlock", environmentBlock);
+
+                const publisher = new XRPublisher({
+                    threeObjectPlugin: 'https://builds.sxp.digital/',
+                    defaultAvatarAnimation: '',
+                    defaultAvatar: 'https://items.sxp.digital/f8886983-a11b-4367-a19c-388662542d84/xrpublisherdefaultavatar.vrm',
+                    defaultEnvironment: 'https://builds.sxp.digital/assets/default_grid.glb',
+                    camCollisions: true,
+                    enableAI: true,
+                    enableNetworking: false,
+                    enableVoiceChat: false
+                });
+                publisher.init();
             });
          </script>
 
@@ -235,7 +269,6 @@
                 defaultAvatarAnimation: '',
                 defaultAvatar: 'https://items.sxp.digital/f8886983-a11b-4367-a19c-388662542d84/xrpublisherdefaultavatar.vrm',
                 defaultEnvironment: 'https://builds.sxp.digital/assets/default_grid.glb',
-                multiplayerAccess: 'loggedIn',
                 camCollisions: true,
                 enableAI: true,
                 enableNetworking: false,

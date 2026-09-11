@@ -1,7 +1,13 @@
 node_modules/
 .DS_Store
+vite.config.ts.timestamp-*
 .env
 .env.local
+*.diff
+*.patch
+CLAUDE.md
+.claude/
+scratch/
 .env.development.local
 .env.test.local
 .env.production.local
@@ -12,6 +18,13 @@ yarn-error.log*
 .pnp.js
 .cache/
 dist/
+examples/
 coverage/
 *.log
 *.swp
+./examples/
+
+# Rust/WASM build artifacts
+crates/*/target/
+crates/*/pkg/
+src/workers/wasm/

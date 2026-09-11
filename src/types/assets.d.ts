@@ -1,43 +1,46 @@
 declare module '*.glsl' {
 	const content: string;
 	export default content;
-  }
-  
-  declare module '*.glb' {
-	const content: string;
-	export default content;
-  }
-  
-  declare module '*.vrm' {
-	const content: string;
-	export default content;
-  }
-  
-  declare module '*.fbx' {
-	const content: string;
-	export default content;
-  }
+}
 
-  declare module '*.png' {
+declare module '*.glb' {
+	const src: string;
+	export default src;
+}
 
-	const value: string;
-  
-	export default value;
-  
-  }
+declare module '*.vrm' {
+	const src: string;
+	export default src;
+}
 
-  declare module '*.svg' {
+declare module '*.fbx' {
+	const src: string;
+	export default src;
+}
 
-	const value: string;
-  
-	export default value;
-  
-  }
+declare module '*.png' {
+	const src: string;
+	export default src;
+}
 
-  declare module '*.woff' {
+declare module '*.jpg' {
+	const src: string;
+	export default src;
+}
 
-	const value: string;
-  
-	export default value;
-  
-  }
+declare module '*.svg' {
+	const src: string;
+	export default src;
+}
+
+declare module '*.woff' {
+	const src: string;
+	export default src;
+}
+
+// Vite's `?worker&inline` query: the module's default export is a
+// zero-arg constructor that returns a live Web Worker instance.
+declare module '*?worker&inline' {
+	const WorkerFactory: new () => Worker;
+	export default WorkerFactory;
+}

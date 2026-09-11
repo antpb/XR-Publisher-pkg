@@ -210,15 +210,10 @@ class ExokitAvatar {
   
   
   updateAnimations() {
-	console.log("updateAnimations called");
-  
 	if (!this.vrm) {
-	  console.log("VRM model not available");
 	  return;
 	}
-	console.log("VRM loaded:", this.vrm);
-	console.log("VRM Humanoid:", this.vrm.humanoid);
-  
+
 	const { hmd, leftGamepad, rightGamepad } = this.inputs;
   
 	// Update the hips position and rotation based on the HMD
@@ -285,18 +280,6 @@ class ExokitAvatar {
   // Update the hand positions and rotations based on the gamepads
   const leftHandNode = this.vrm.humanoid.getRawBoneNode(VRMHumanBoneName.LeftHand);
   const rightHandNode = this.vrm.humanoid.getRawBoneNode(VRMHumanBoneName.RightHand);
-  console.log("Left controller position:", leftGamepad.position);
-  console.log("Right controller position:", rightGamepad.position);
-  
-  if (leftHandNode) {
-	console.log("Left hand node position (before update):", leftHandNode.position);
-	console.log("Left hand node rotation (before update):", leftHandNode.quaternion);
-  }
-  
-  if (rightHandNode) {
-	console.log("Right hand node position (before update):", rightHandNode.position);
-	console.log("Right hand node rotation (before update):", rightHandNode.quaternion);
-  }
 
   if (leftHandNode) {
     const leftHandWorldPosition = new THREE.Vector3().copy(this.inputs.leftGamepad.position);

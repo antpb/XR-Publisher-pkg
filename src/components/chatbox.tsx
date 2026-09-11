@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Minimize2, Maximize2 } from 'lucide-react';
-import { set } from 'lodash';
+import { Send, Minimize2, Maximize2, X as CloseIcon } from 'lucide-react';
+import useInteractionStore from '../stores/interactionStore';
+import useNpcMessageStore from '../stores/npcMessageStore';
+import { getApiBase } from '../config/apiConfig';
+import { getWorldIdentity } from '../editor/worldTokenClient';
 
 function generateRoomIdFromPath(path: string): string {
+  if (!path || typeof path !== 'string') return 'default';
   const cleanPath = path.replace(/^\/+|\/+$/g, '').split('?')[0];
 
   // if cleanPath is empty, return default room ID
@@ -17,15 +21,53 @@ interface Message {
   error?: boolean;
 }
 
+interface ChatBoxProps {
+  name?: string;
+  defaultMessage?: string;
+  personality?: string;
+  objectsInRoom?: string[];
+  objectAwareness?: string;
+  showUI?: boolean;
+  initializing?: boolean;
+}
+
+/**
+ * Mounts ChatBox only while interacting with an NPC. This component owns the
+ * interaction-store subscription so that EnvironmentFront does NOT — when
+ * EnvironmentFront subscribed directly, pressing E re-rendered the entire
+ * Canvas/world tree (the "frame drop on interact" bug).
+ */
+export function NPCChatGate({
+	objectsInRoom = [],
+	showUI = true,
+	initializing = false
+}: {
+	objectsInRoom?: string[];
+	showUI?: boolean;
+	initializing?: boolean;
+}) {
+	const interactingNpcName = useInteractionStore((s: any) =>
+		s.isInteracting && s.interactingWith?.type === 'npc' ? (s.interactingWith?.name || 'NPC') : null
+	);
+	if (!interactingNpcName) return null;
+	return (
+		<ChatBox
+			name={interactingNpcName}
+			personality={''}
+			defaultMessage={''}
+			objectAwareness={''}
+			objectsInRoom={objectsInRoom}
+			showUI={showUI}
+			initializing={initializing}
+		/>
+	);
+}
+
 export default function ChatBox({
 	name = "Assistant",
-	defaultMessage,
 	personality,
 	objectsInRoom = [],
 	objectAwareness = "0",
-	showUI = true,
-	messages = [],
-	setMessages,
 	initializing = false
   }: ChatBoxProps) {
 	const [input, setInput] = useState<string>('');
@@ -33,7 +75,7 @@ export default function ChatBox({
 	const [isLoading, setIsLoading] = useState<boolean>(false);
 	const messagesEndRef = useRef<HTMLDivElement>(null);
 	const inputRef = useRef<HTMLInputElement>(null);
-	const [currentRoomId] = useState<string>(() => 
+	const [currentRoomId] = useState<string>(() =>
 	  generateRoomIdFromPath(window.location.pathname)
 	);
 	const MAX_RETRIES = 2;
@@ -41,14 +83,21 @@ export default function ChatBox({
 	  sessionId: string | null;
 	  nonce: string | null;
 	}>({ sessionId: null, nonce: null });
+	// Selectors, not whole-store destructure — a whole-store subscribe
+	// re-renders on every store write.
+	const stopInteraction = useInteractionStore((s: any) => s.stopInteraction);
+	const messages = useNpcMessageStore((s) => s.messages);
+	const addMessage = useNpcMessageStore((s) => s.addMessage);
   
 	const initializeSession = async () => {
 	  try {
-		const response = await fetch('https://xr-publisher.sxpdigital.workers.dev/api/character/session', {
+		// Character records live under the world author's namespace on the
+		// same API worker that serves the world.
+		const response = await fetch(`${getApiBase()}/api/character/session`, {
 		  method: 'POST',
 		  headers: { 'Content-Type': 'application/json' },
 		  body: JSON.stringify({
-			author: 'antpb',
+			author: getWorldIdentity().author,
 			name: name,
 			personality: personality,
 			roomId: currentRoomId
@@ -103,7 +152,7 @@ export default function ChatBox({
 			return sendMessage(userMessage, retryAttempt + 1);
 		  }
 	  
-		  const response = await fetch('https://xr-publisher.sxpdigital.workers.dev/api/character/message', {
+		  const response = await fetch(`${getApiBase()}/api/character/message`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({
@@ -149,21 +198,21 @@ export default function ChatBox({
 		}
 	  };
 	  
-  
+	
 	const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
 	  e.preventDefault();
 	  if (isLoading || !input.trim()) return;
-  
+	
 	  const userMessage: Message = {
 		sender: 'You',
 		text: input.trim(),
 		timestamp: new Date().toISOString()
 	  };
-  
-	  setMessages(prev => [...prev, userMessage]);
+	
+	  addMessage(userMessage);
 	  setInput('');
 	  setIsLoading(true);
-  
+	
 	  try {
 		// Ensure we have a valid session
 		if (!sessionData.sessionId || !sessionData.nonce) {
@@ -176,7 +225,7 @@ export default function ChatBox({
 			throw new Error('Failed to initialize session');
 		  }
 		}
-
+	
 		const data = await sendMessage(userMessage);
 		
 		const assistantMessage: Message = {
@@ -184,21 +233,21 @@ export default function ChatBox({
 		  text: data.text,
 		  timestamp: new Date().toISOString()
 		};
-		
-		setMessages(prev => [...prev, assistantMessage]);
+
+		addMessage(assistantMessage);
 	  } catch (error) {
 		console.error('Chat error:', error);
-		setMessages(prev => [...prev, {
+		addMessage({
 		  sender: 'System',
-		  text: error.message === 'Maximum retry attempts reached'
+		  text: (error as any).message === 'Maximum retry attempts reached'
 			? 'Connection error. Please refresh the page and try again.'
 			: 'Sorry, I encountered an error. Please try again.',
 		  timestamp: new Date().toISOString(),
 		  error: true
-		}]);
-  
+		});
+	
 		// Reset session on terminal errors
-		if (error.message === 'Maximum retry attempts reached') {
+		if ((error as any).message === 'Maximum retry attempts reached') {
 		  setSessionData({ sessionId: null, nonce: null });
 		}
 	  } finally {
@@ -217,26 +266,49 @@ export default function ChatBox({
 		setIsOpen(prev => !prev);
 	};
 
+	const handleClose = (e: React.MouseEvent<HTMLButtonElement>) => {
+		e.preventDefault();
+		e.stopPropagation();
+		// Stop interaction and close UI
+		stopInteraction();
+		setIsOpen(false);
+	};
+
+	// pointerdown/mousedown must not escape the chat — they bubble to the
+	// canvas container's requestPointerLock handler, which would pointer-lock
+	// the chat input on click (Element.prototype.requestPointerLock exists on
+	// every element, so the container's typeof guard passes).
 	return (
 		<div
-			className={`absolute bottom-20 right-4 w-96 rounded-lg shadow-xl bg-gray-900/95 backdrop-blur border border-gray-800 
+			className={`absolute bottom-20 right-4 w-96 rounded-lg shadow-xl bg-gray-900/95 backdrop-blur border border-gray-800
     transition-all duration-200 ease-in-out ${isOpen ? 'h-[500px]' : 'h-14'}`}
 			style={{ zIndex: 9999, pointerEvents: 'auto' }}
 			onClick={e => e.stopPropagation()}
+			onPointerDown={e => e.stopPropagation()}
+			onMouseDown={e => e.stopPropagation()}
 		>
 			{/* Header */}
 			<div className="flex items-center justify-between p-4 border-b border-gray-800">
 				<h3 className="text-lg font-semibold text-white">{name}</h3>
-				<button
-					onClick={handleToggle}
-					className="p-1 hover:bg-gray-800 rounded transition-colors"
-				>
-					{isOpen ? (
-						<Minimize2 className="w-5 h-5 text-gray-400" />
-					) : (
-						<Maximize2 className="w-5 h-5 text-gray-400" />
-					)}
-				</button>
+				<div className="flex items-center gap-2">
+					<button
+						onClick={handleToggle}
+						className="p-1 hover:bg-gray-800 rounded transition-colors"
+					>
+						{isOpen ? (
+							<Minimize2 className="w-5 h-5 text-gray-400" />
+						) : (
+							<Maximize2 className="w-5 h-5 text-gray-400" />
+						)}
+					</button>
+					<button
+						onClick={handleClose}
+						className="p-1 hover:bg-red-900/40 rounded transition-colors"
+						aria-label="Close chat"
+					>
+						<CloseIcon className="w-5 h-5 text-red-300" />
+					</button>
+				</div>
 			</div>
 
 			{isOpen && (
@@ -253,7 +325,8 @@ export default function ChatBox({
 									: message.error
 										? 'bg-red-900/50 text-red-200'
 										: 'bg-gray-800 text-white'
-									}`}>
+									}`}
+								>
 									<p className="text-sm">{message.text}</p>
 								</div>
 								<span className="text-xs text-gray-500 mt-1">

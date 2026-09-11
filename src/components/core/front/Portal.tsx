@@ -11,7 +11,7 @@ import {
 } from "@react-three/drei";
 import { GLTFAudioEmitterExtension } from "three-omi";
 // import { GLTFGoogleTiltBrushMaterialExtension } from "three-icosa";
-import { VRMLoaderPlugin } from "@pixiv/three-vrm";
+import { createVRMLoaderPlugin } from "../../../utils/vrmLoader";
 import { PortalProps } from "./Portal.d";
 /**
  * Parses a Matrix URI and returns a matrix ID.
@@ -102,7 +102,7 @@ import { PortalProps } from "./Portal.d";
  *
  * @return {JSX.Element} The portal.
  */
-export function Portal(model: PortalProps): JSX.Element {
+export function Portal(model: PortalProps): React.JSX.Element {
 	if (model.object && model.defaultFont) {
 		return (
 			<>
@@ -136,26 +136,41 @@ export function Portal(model: PortalProps): JSX.Element {
 				<RigidBody
 					type="fixed"
 					colliders={"trimesh"}
-					onCollisionEnter={() => {
-						const url = new URL(
-							model.destinationUrl,
-							window.location.href
-						);
-						if (url.protocol === "matrix:") {
-							const destination = parseMatrixUri(
-								model.destinationUrl
-							);
-							if (typeof destination !== 'string' && 'mxid1' in destination) {
-								window.location.href =
-									"https://thirdroom.io/world/" +
-									destination.mxid1;
-							} else {
-								window.location.href = model.destinationUrl;
+				onCollisionEnter={() => {
+					if (model.useTeleportDestination &&
+						model.teleportDestinationX != null &&
+						model.teleportDestinationY != null &&
+						model.teleportDestinationZ != null) {
+						const teleportEvent = new CustomEvent('portalTeleport', {
+							detail: {
+								x: Number(model.teleportDestinationX),
+								y: Number(model.teleportDestinationY),
+								z: Number(model.teleportDestinationZ)
 							}
+						});
+						window.dispatchEvent(teleportEvent);
+						return;
+					}
+					
+					const url = new URL(
+						model.destinationUrl,
+						window.location.href
+					);
+					if (url.protocol === "matrix:") {
+						const destination = parseMatrixUri(
+							model.destinationUrl
+						);
+						if (typeof destination !== 'string' && 'mxid1' in destination) {
+							window.location.href =
+								"https://thirdroom.io/world/" +
+								destination.mxid1;
 						} else {
 							window.location.href = model.destinationUrl;
 						}
-					}}
+					} else {
+						window.location.href = model.destinationUrl;
+					}
+				}}
 				>
 					<primitive visible={false} object={model.object} />
 				</RigidBody>
@@ -180,11 +195,12 @@ export function Portal(model: PortalProps): JSX.Element {
 		// loader.setDRACOLoader(dracoLoader);
 
 		loader.register(
-			(parser) => new GLTFAudioEmitterExtension(parser, listener)
+			// three-omi's plugin predates the `name` field on GLTFLoaderPlugin;
+			// it works at runtime (name is set on the instance) but the shipped
+			// typings omit it.
+			(parser) => new GLTFAudioEmitterExtension(parser, listener) as any
 		);
-		loader.register((parser) => {
-			return new VRMLoaderPlugin(parser);
-		});
+		loader.register((parser) => createVRMLoaderPlugin(parser));
 	});
 
 	const { actions } = useAnimations(gltf.animations, gltf.scene);
@@ -211,9 +227,23 @@ export function Portal(model: PortalProps): JSX.Element {
 				type="fixed"
 				colliders={"cuboid"}
 				collisionGroups={interactionGroups(2, [0, 2])} 
-				onCollisionEnter={() =>
-					(window.location.href = model.destinationUrl)
-				}
+				onCollisionEnter={() => {
+					if (model.useTeleportDestination &&
+						model.teleportDestinationX != null &&
+						model.teleportDestinationY != null &&
+						model.teleportDestinationZ != null) {
+						const teleportEvent = new CustomEvent('portalTeleport', {
+							detail: {
+								x: Number(model.teleportDestinationX),
+								y: Number(model.teleportDestinationY),
+								z: Number(model.teleportDestinationZ)
+							}
+						});
+						window.dispatchEvent(teleportEvent);
+						return;
+					}
+					window.location.href = model.destinationUrl;
+				}}
 				rotation={[model.rotationX, model.rotationY, model.rotationZ]}
 				position={[model.positionX, model.positionY, model.positionZ]}
 				scale={[model.scaleX, model.scaleY, model.scaleZ]}

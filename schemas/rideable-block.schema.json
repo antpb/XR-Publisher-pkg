@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "three-rideable-block",
+  "title": "Rideable Block",
+  "description": "A rideable vehicle. The player walks up and presses E to mount, then drives it (or rides it, for on-rails types); pressing E again dismounts. Driving is networked — peers see the vehicle move and the driver seated in it.",
+  "type": "object",
+  "required": ["threeobjecturl", "vehicletype"],
+  "properties": {
+    "threeobjecturl": {
+      "type": "string",
+      "description": "URL to the 3D model file (GLB/GLTF) used as the vehicle body. Optional named nodes drive animation: xrp_wheel_01..04 (cars: FL,FR,RL,RR; bikes: 01 front, 02 rear) spin/steer with the drive; xrp_propeller_01, xrp_propeller_02, … (any count, shaft along the vehicle's forward axis) spin while occupied (boats/planes)."
+    },
+    "vehicletype": {
+      "type": "string",
+      "enum": ["car", "bike", "flying", "hovering", "animal", "train", "coaster", "boat"],
+      "default": "car",
+      "description": "Locomotion model. car/animal steer on the ground; bike is a two-wheeler that LEANS into turns and steers its front wheel slightly (and caps at 1 passenger); flying free-flies along the camera look direction; hovering floats above terrain; boat floats on the water surface; train/coaster follow the `waypoints` curve (train is driver-advanced, coaster auto-advances)."
+    },
+    "name": {
+      "type": "string",
+      "description": "Display name shown in the 'Press E to Ride' banner. Also the stable networking id — set it (and keep it stable) so every client agrees which vehicle is which."
+    },
+    "waypoints": {
+      "type": "string",
+      "description": "JSON array of [x,y,z] world points defining the rail path for train/coaster types, e.g. '[[0,0,0],[10,0,5],[20,2,0]]'. Interpolated into a smooth CatmullRom curve. Ignored by non-rail types."
+    },
+    "speed": {
+      "type": "number",
+      "default": 1,
+      "description": "Designer speed multiplier applied to the type's base speed"
+    },
+    "seatoffsetx": {
+      "type": "number",
+      "default": 0,
+      "description": "Seat nudge (vehicle-local) on X, applied on top of the auto-derived bounding-box-center seat"
+    },
+    "seatoffsety": {
+      "type": "number",
+      "default": 0,
+      "description": "Seat nudge (vehicle-local) on Y — positive raises the rider above the auto-centered seat"
+    },
+    "seatoffsetz": {
+      "type": "number",
+      "default": 0,
+      "description": "Seat nudge (vehicle-local) on Z, applied on top of the auto-derived bounding-box-center seat. Used for seat 0 only when `seats` is not set."
+    },
+    "seats": {
+      "type": "string",
+      "description": "Multi-seat layout: JSON array of [x,y,z] vehicle-local seat offsets (relative to the auto bbox-center, same frame as seatoffset), e.g. '[[0,0.2,0.3],[0.5,0.2,-0.2],[-0.5,0.2,-0.2]]'. Index 0 is the DRIVER/host; the rest are passenger seats filled in boarding order. Capacity = array length (works for every vehicle type — car, bike, flying, boat, coaster, etc.), EXCEPT `bike`, which caps at a driver + 1 passenger regardless of how many seats you author (define them the same way; bikes seat fore/aft). Players press E to take the next open seat (driver if empty, else ride along); the driver hosts the motion and everyone rides it in lockstep. Omit for a single-seat (driver-only) vehicle."
+    },
+    "positionx": { "type": "number", "default": 0, "description": "Spawn X position in world space" },
+    "positiony": { "type": "number", "default": 0, "description": "Spawn Y position in world space" },
+    "positionz": { "type": "number", "default": 0, "description": "Spawn Z position in world space" },
+    "rotationy": { "type": "number", "default": 0, "description": "Initial heading (degrees) around the Y axis" },
+    "scalex": { "type": "number", "default": 1, "description": "Scale factor on X axis" },
+    "scaley": { "type": "number", "default": 1, "description": "Scale factor on Y axis" },
+    "scalez": { "type": "number", "default": 1, "description": "Scale factor on Z axis" }
+  },
+  "additionalProperties": false
+}

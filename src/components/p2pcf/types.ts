@@ -23,7 +23,7 @@ export interface TurnIceServer {
 	sessionId: string;
 	peers: Map<string, P2PCFPeer>;
 	// Fixed the syntax for the method signatures
-	on: (event: string, callback: Function) => void;
+	on: (event: string, callback: (...args: any[]) => void) => void;
   }
   
   export interface P2PCFPeer {
@@ -31,5 +31,5 @@ export interface TurnIceServer {
 	client_id: string;
 	addStream: (stream: MediaStream) => void;
 	removeStream: (stream: MediaStream) => void;
-	on: (event: string, callback: Function) => void;
+	on: (event: string, callback: (...args: any[]) => void) => void;
   }

@@ -1,106 +1,13 @@
 import React from "react";
-import { Raycaster, Vector3 } from "three";
-import { useXR, Interactive, useController } from "@react-three/xr";
-import { useFrame, useThree } from "@react-three/fiber";
+import { Vector3, DoubleSide, Raycaster, Object3D, Mesh, RingGeometry, Quaternion } from "three";
+import { useXR } from "@react-three/xr";
+import { useThree, useFrame } from "@react-three/fiber";
 import { useCallback, useRef, useState, useEffect } from "react";
-import { useRapier } from "@react-three/rapier";
-import {
-	Text,
-} from "@react-three/drei";
+import { getNetworkBridge } from "../networking/NetworkBridge";
 
-export function TeleportIndicator() {
-
-	return (
-		<>
-			<mesh position={[0, 0.25, 0]}>
-				<boxGeometry args={[0.1, 0.1, 0.1]} attach="geometry" />
-				<meshBasicMaterial attach="material" color={0xff00ff} />
-			</mesh>
-		</>
-	);
-}
-export function ClickIndicatorObject() {
-	return (
-		<>
-			<mesh position={[0, 0, -0.005]}>
-				<boxGeometry args={[0.08, 0.08, 0.08]} attach="geometry" />
-				<meshBasicMaterial attach="material" color={0x26ff00} />
-			</mesh>
-		</>
-	);
-}
-interface ButtonProps {
-	onClick: () => void;
-	position: [number, number, number];
-	color: string;
-	hoverColor: string;
-}
-
-function Button({ onClick, position, color, hoverColor }: ButtonProps) {
-	const mesh = React.useRef();
-
-	const [hovered, setHovered] = React.useState(false);
-	const currentColor = hovered ? hoverColor : color;
-
-	return (
-		<Interactive
-			onSelect={onClick}
-			onHover={() => setHovered(true)}
-			onBlur={() => setHovered(false)}
-		>
-			<mesh position={position} ref={mesh}>
-				<boxGeometry args={[0.4, 0.2, 0.01]} />
-				<meshStandardMaterial color={currentColor} />
-			</mesh>
-		</Interactive>
-	);
-}
-
-function Menu() {
-	const menuRef = useRef();
-	// const { camera } = useThree();
-	// const { player, controllers } = useXR();
-	const [muted, setMuted] = useState(false);
-	const handleButtonClick = () => {
-		console.log("Button clicked");
-		if (window.localStream) {
-			// loop through all audio tracks and mute them
-			for (let i = 0; i < window.localStream.getAudioTracks().length; i++) {
-				window.localStream.getAudioTracks()[i].enabled = !window.localStream.getAudioTracks()[i].enabled;
-			}
-			// if(muted){
-			// 	window.localStream.getAudioTracks()[0].enabled = false;
-			// } else {
-			// 	window.localStream.getAudioTracks()[0].enabled = true;
-			// }
-			// console.log("window.localStream", window.localStream.getAudioTracks()[0]);
-		}
-		setMuted(!muted);
-	};
-
-
-	return (
-		<group ref={menuRef} visible={false}>
-			<Button
-				onClick={handleButtonClick}
-				position={[0, 0.1, -0.108]} // Position relative to the menu
-				color={muted ? "#ff3e00" : "#b7ff00"}
-				hoverColor={muted ? "#fa8660" : "#daffa0"}
-			/>
-			<Text
-				color="black"
-				anchorX="center"
-				anchorY="middle"
-				fontSize={0.1}
-				position={[0, 0.1, -0.1]}
-			>
-				{muted ? `Mute` : `Unmute`}
-			</Text>
-			{/* Additional menu items */}
-		</group>
-	);
-}
-
+const MAX_TELEPORT_DISTANCE = 60;
+const MENU_HOLD_DURATION = 2.0;
+const MENU_HINT_THRESHOLD = 0.5;
 
 interface TeleportTravelProps {
 	spawnPoint: [number, number, number];
@@ -110,285 +17,527 @@ interface TeleportTravelProps {
 		vrm: string;
 		inWorldName: string;
 	};
-	Indicator?: React.ComponentType;
-	ClickIndicator?: React.ComponentType;
-	useNormal?: boolean;
+	waterLevel?: number;
 	children?: React.ReactNode;
 }
 
+function isExcludedFromTeleport(obj: Object3D): boolean {
+	const name = obj.name.toLowerCase();
+	if (
+		name.includes('particle') ||
+		name.includes('effect') ||
+		name.includes('smoke') ||
+		name.includes('spark') ||
+		name.includes('ui') ||
+		name.includes('cursor') ||
+		name.includes('avatar') ||
+		name.includes('player') ||
+		name.includes('playerone') ||
+		name.includes('hand') ||
+		name.includes('water') ||
+		name.includes('ocean') ||
+		name.includes('sky') ||
+		name.includes('cloud') ||
+		name.includes('teleport-indicator') ||
+		name.includes('hold-ring') ||
+		name.includes('landing') ||
+		name.includes('tree') ||
+		name.includes('boulder') ||
+		name.includes('mountain') ||
+		name.includes('grass') ||
+		name.includes('wind') ||
+		name.includes('npc') ||
+		name.includes('light') ||
+		name.includes('camera')
+	) {
+		return true;
+	}
+	if (obj.userData?.teleportable === false || obj.userData?.isParticle || obj.userData?.isEffect) {
+		return true;
+	}
+	if (obj.userData?.camExcludeCollision) {
+		return true;
+	}
+	
+	let parent = obj.parent;
+	while (parent) {
+		if (parent.userData?.camExcludeCollision) {
+			return true;
+		}
+		if (parent.name && parent.name.toLowerCase().includes('playerone')) {
+			return true;
+		}
+		parent = parent.parent;
+	}
+	
+	return false;
+}
+
 export default function TeleportTravel(props: TeleportTravelProps) {
-	const { scene } = useThree();
+	const { scene, gl } = useThree();
 	const { userData } = props;
-	const {
-		// centerOnTeleport,
-		Indicator = TeleportIndicator,
-		ClickIndicator = ClickIndicatorObject,
-		useNormal = true
-	} = props;
-	const [isHovered, setIsHovered] = useState(false);
-	const [canTeleport, setCanTeleport] = useState(true);
-	const [canInteract, setCanInteract] = useState(false);
+
 	const [spawnPos] = useState(props.spawnPoint);
-	// @ts-ignore
-	const [intersectionPoint, setIntersectionPoint] = useState(new Vector3());
-	// @ts-ignore
-	const [currentPosition, setCurrentPosition] = useState(new Vector3());
+	const { session, origin } = useXR();
+	const isPresenting = session !== undefined;
+	const hasInitializedSpawnRef = useRef(false);
+	const movementTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-	const target = useRef();
-	const targetLoc = useRef<THREE.Group>(null);
-	const ray = useRef(new Raycaster());
-	const { world, rapier } = useRapier();
+	const raycasterRef = useRef(new Raycaster());
+	const rayOriginRef = useRef(new Vector3());
+	const rayDirRef = useRef(new Vector3());
 
-	const rayDir = useRef({
-		pos: new Vector3(),
-		dir: new Vector3()
-	});
+	const terrainChunksRef = useRef<Mesh[]>([]);
+	const terrainCacheCounterRef = useRef(0);
 
-	const { controllers, player, isPresenting } = useXR();
+	const hoverPointRef = useRef(new Vector3());
+	const isHoveringRef = useRef(false);
+
+	const landingDotRef = useRef<any>(null);
+	const holdRingGroupRef = useRef<any>(null);
+	const holdRingMeshRef = useRef<any>(null);
+
+	const selectStartTimeRef = useRef(0);
+	const isSelectingRef = useRef(false);
+	const holdProgressRef = useRef(0);
+	const menuOpenedRef = useRef(false);
+
+	const tempCamVec = useRef(new Vector3());
+	const isInWaterRef = useRef(false);
+	const isWaterTargetRef = useRef(false);
+	const isGrabbingRef = useRef(false);
+
+	const tmpQuatA = useRef(new Quaternion());
+	const handRayFoundRef = useRef(false);
+	const menuFwdRef = useRef(new Vector3());
 
 	useEffect(() => {
+		const onGrabStart = () => { isGrabbingRef.current = true; };
+		const onGrabEnd = () => { isGrabbingRef.current = false; };
+		window.addEventListener('xrGrabStart', onGrabStart);
+		window.addEventListener('xrGrabEnd', onGrabEnd);
+		return () => {
+			window.removeEventListener('xrGrabStart', onGrabStart);
+			window.removeEventListener('xrGrabEnd', onGrabEnd);
+		};
+	}, []);
+
+	useEffect(() => {
+		if (!isPresenting || !origin || hasInitializedSpawnRef.current) return;
+		hasInitializedSpawnRef.current = true;
+		
 		const x = spawnPos?.[0] ?? 0;
 		const y = (spawnPos?.[1] ?? 0) + 0.1;
 		const z = spawnPos?.[2] ?? 0;
 
-		if (isPresenting) {
-			const participantObject = scene.getObjectByName("playerOne");
-			console.log("participantObject", participantObject);
-			if (participantObject) {
-				player.position.x = participantObject.parent.parent.position.x;
-				player.position.y = participantObject.parent.parent.position.y;
-				player.position.z = participantObject.parent.parent.position.z;
-			} else {
-				player.position.set(x, y, z);
-			}
-		}
-	}, [isPresenting])
-
-
-	// Set a variable finding an object in the three.js scene that is named reticle.
-	useEffect(() => {
-		// Remove the reticle when the controllers are registered.
-		const reticle = scene.getObjectByName("reticle");
 		const participantObject = scene.getObjectByName("playerOne");
-		if (controllers?.length > 0 && reticle) {
-			// console.log("participantObject", participantObject);
-			// set participantObject to invisible
-			participantObject.visible = false;
-			reticle.visible = false;
+		if (participantObject?.parent?.parent?.position) {
+			origin.position.x = participantObject.parent.parent.position.x;
+			origin.position.y = participantObject.parent.parent.position.y;
+			origin.position.z = participantObject.parent.parent.position.z;
+		} else {
+			origin.position.set(x, y, z);
 		}
-	}, [controllers]);
-	const movementTimeoutRef = useRef(null);
-	// const teleport = useTeleportation();
-	let dominantController = useController('right');
-	// const rightController = useController('right')
+	}, [isPresenting, origin, scene, spawnPos]);
 
-	const updateRate = 1000 / 5; // 5Hz update rate
-	const lastNetworkUpdateTimeRef = useRef(0);
+	useEffect(() => {
+		raycasterRef.current.far = MAX_TELEPORT_DISTANCE;
+		raycasterRef.current.near = 0.1;
+	}, []);
 
-
-	useFrame((state) => {
-		const now = state.clock.elapsedTime * 1000;
-
-		if (
-			isHovered &&
-			controllers.length > 0 &&
-			ray.current &&
-			target.current &&
-			targetLoc.current &&
-			dominantController &&
-			dominantController.controller
-		) {
-			dominantController.controller.getWorldDirection(rayDir.current.dir);
-			dominantController.controller.getWorldPosition(rayDir.current.pos);
-			// ray.far = 0.05;
-			// ray.near = 0.01;
-			rayDir.current.dir.multiplyScalar(-1);
-			ray.current.set(rayDir.current.pos, rayDir.current.dir);
-
-			const [intersection] = ray.current.intersectObject(target.current);
-
-			if (
-				intersection &&
-				intersection.distance < 100 &&
-				intersection.distance > .5
-			) {
-				const intersectionObject = intersection.object;
-				let containsInteractiveObject = false;
-				intersectionObject.traverseAncestors((parent) => {
-					if (parent.name === "video") {
-						containsInteractiveObject = true;
-					}
-					if (parent.name === "portal") {
-						containsInteractiveObject = true;
-					}
-				});
-				if (containsInteractiveObject) {
-					// console.log("set teleport false in contains interactive object");
-					setCanInteract(true);
-					setCanTeleport(false);
-				} else {
-					setCanInteract(false);
-					setCanTeleport(true);
-				}
-				if (useNormal) {
-					const p = intersection.point;
-					setIntersectionPoint(p);
-
-					// targetLoc.current.position.set(0, 0, 0);
-
-					// const n = intersection.face.normal.clone();
-					// n.transformDirection(intersection.object.matrixWorld);
-
-					// targetLoc.current.lookAt(n);
-					// targetLoc.current.rotateOnAxis(
-					// 	new Vector3(1, 0, 0),
-					// 	Math.PI / 2
-					// );
-					targetLoc.current.position.copy(p);
-				} else {
-					targetLoc.current.position.copy(intersection.point);
-				}
-				setCurrentPosition(intersection.point);
+	const collectTerrainChunks = useCallback(() => {
+		const chunks: Mesh[] = [];
+		scene.traverse((obj: Object3D) => {
+			if ((obj as Mesh).isMesh && obj.name.startsWith('terrain-chunk-')) {
+				chunks.push(obj as Mesh);
 			}
-			if (now - lastNetworkUpdateTimeRef.current > updateRate) {
-				const p2pcf = window.p2pcf;
-				if (p2pcf) {
-					//   const rotation = [
-					// 	player.rotation.x,
-					// 	player.rotation.y,
-					// 	player.rotation.z,
-					//   ];
-					const messageObject = {
-						[p2pcf.clientId]: {
-							profileImage: props.userData.profileImage,
-							vrm: userData.vrm,
-							inWorldName: userData.inWorldName,
-						},
-					};
-					const message = JSON.stringify(messageObject);
-					p2pcf.broadcast(new TextEncoder().encode(message)), p2pcf;
-					lastNetworkUpdateTimeRef.current = now;
+		});
+		terrainChunksRef.current = chunks;
+	}, [scene]);
+
+	const findTerrainHit = useCallback((rayOrig: Vector3, rayDir: Vector3): Vector3 | null => {
+		const chunks = terrainChunksRef.current;
+		if (chunks.length === 0) return null;
+
+		const savedRaycasts = chunks.map(c => c.raycast);
+		chunks.forEach(c => { c.raycast = Mesh.prototype.raycast; });
+
+		raycasterRef.current.set(rayOrig, rayDir);
+		const hits = raycasterRef.current.intersectObjects(chunks, false);
+
+		chunks.forEach((c, i) => { c.raycast = savedRaycasts[i]; });
+
+		for (const hit of hits) {
+			if (hit.distance > MAX_TELEPORT_DISTANCE) continue;
+			if (hit.face) {
+				const worldNormal = hit.face.normal.clone();
+				worldNormal.transformDirection(hit.object.matrixWorld);
+				if (worldNormal.y < 0.3) continue;
+			}
+			return hit.point.clone();
+		}
+		return null;
+	}, []);
+
+	const findGenericHit = useCallback((rayOrig: Vector3, rayDir: Vector3): Vector3 | null => {
+		raycasterRef.current.set(rayOrig, rayDir);
+		const hits = raycasterRef.current.intersectObjects(scene.children, true);
+
+		for (const hit of hits) {
+			if (hit.distance > MAX_TELEPORT_DISTANCE) break;
+			if (isExcludedFromTeleport(hit.object)) continue;
+			if (!(hit.object as Mesh).isMesh) continue;
+			const mat = (hit.object as any).material;
+			if (mat?.type === 'PointsMaterial' || mat?.type === 'SpriteMaterial') continue;
+			if (mat?.transparent && mat?.opacity < 0.1) continue;
+			if (hit.face) {
+				const worldNormal = hit.face.normal.clone();
+				worldNormal.transformDirection(hit.object.matrixWorld);
+				if (worldNormal.y < 0.3) continue;
+			}
+			return hit.point.clone();
+		}
+		return null;
+	}, [scene]);
+
+	const findWaterHit = useCallback((rayOrig: Vector3, rayDir: Vector3): Vector3 | null => {
+		const waterLevel = props.waterLevel ?? -12;
+		const denom = rayDir.y;
+		if (Math.abs(denom) < 0.001) return null;
+
+		const t = (waterLevel - rayOrig.y) / denom;
+		if (t <= 0 || t > MAX_TELEPORT_DISTANCE) return null;
+
+		const waterHitPoint = new Vector3(
+			rayOrig.x + rayDir.x * t,
+			waterLevel,
+			rayOrig.z + rayDir.z * t
+		);
+
+		const upwardOrigin = waterHitPoint.clone();
+		upwardOrigin.y = waterLevel - 0.1;
+		const upwardDir = new Vector3(0, 1, 0);
+		const terrainAbove = findTerrainHit(upwardOrigin, upwardDir);
+		if (terrainAbove && terrainAbove.y > waterLevel + 0.5) {
+			return null;
+		}
+
+		return waterHitPoint;
+	}, [props.waterLevel, findTerrainHit]);
+
+	const executeTeleport = useCallback((targetPoint: Vector3, isWaterTarget: boolean = false) => {
+		if (!origin) return;
+		
+		const avatarHeight = props.avatarHeightOffset?.current ?? 1.6;
+		const waterLevel = props.waterLevel ?? -12;
+
+		const xrCam = gl.xr.getCamera();
+		xrCam.getWorldPosition(tempCamVec.current);
+		const trackingHeadOffset = tempCamVec.current.y - origin.position.y;
+
+		let desiredCameraY: number;
+		if (isWaterTarget || targetPoint.y <= waterLevel + 0.1) {
+			const shoulderDepth = avatarHeight * 0.15;
+			desiredCameraY = waterLevel + shoulderDepth + (avatarHeight - avatarHeight * 0.85);
+		} else {
+			desiredCameraY = targetPoint.y + avatarHeight;
+		}
+		const originY = desiredCameraY - trackingHeadOffset;
+
+		origin.position.set(targetPoint.x, originY, targetPoint.z);
+
+		const p2pcf = (window as any).p2pcf;
+		if (p2pcf) {
+			const bridge = getNetworkBridge();
+			// Use quaternion from origin for rotation
+			const originQuat = new Quaternion().setFromEuler(origin.rotation);
+			bridge.sendState({
+				position: [targetPoint.x, targetPoint.y, targetPoint.z],
+				rotation: [originQuat.x, originQuat.y, originQuat.z, originQuat.w],
+				action: 'walking',
+				hangtime: 0,
+			}, userData);
+
+			if (movementTimeoutRef.current) {
+				clearTimeout(movementTimeoutRef.current);
+			}
+			movementTimeoutRef.current = setTimeout(() => {
+				bridge.sendState({
+					position: [targetPoint.x, targetPoint.y, targetPoint.z],
+					rotation: [originQuat.x, originQuat.y, originQuat.z, originQuat.w],
+					action: 'idle',
+					hangtime: 0,
+				}, userData);
+			}, 100);
+		}
+	}, [origin, gl, userData, props.avatarHeightOffset]);
+
+	/**
+	 * Compute hand/controller ray using the input source's targetRaySpace.
+	 * This matches the visual ray pointer rendered by @react-three/xr.
+	 * Returns true if a valid ray was found.
+	 */
+	const computeHandRay = useCallback((xrFrame: any, refSpace: any): boolean => {
+		if (!xrFrame || !refSpace) return false;
+
+		const xrSession = gl.xr.getSession();
+		if (!xrSession) return false;
+
+		let rightSource: any = null;
+		let leftSource: any = null;
+
+		for (const inputSource of xrSession.inputSources as Iterable<any>) {
+			if (inputSource.targetRayMode === 'transient-pointer') continue;
+			if (!inputSource.targetRaySpace) continue;
+
+			if (inputSource.handedness === 'right' && !rightSource) {
+				rightSource = inputSource;
+			} else if (inputSource.handedness === 'left' && !leftSource) {
+				leftSource = inputSource;
+			}
+		}
+
+		const chosenSource = rightSource || leftSource;
+		if (!chosenSource) return false;
+
+		const pose = xrFrame.getPose(chosenSource.targetRaySpace, refSpace);
+		if (!pose) return false;
+
+		const p = pose.transform.position;
+		const o = pose.transform.orientation;
+
+		rayOriginRef.current.set(p.x, p.y, p.z);
+		tmpQuatA.current.set(o.x, o.y, o.z, o.w);
+		rayDirRef.current.set(0, 0, -1).applyQuaternion(tmpQuatA.current);
+
+		if (origin) {
+			origin.updateWorldMatrix(true, false);
+			rayOriginRef.current.applyMatrix4(origin.matrixWorld);
+			const originQ = new Quaternion().setFromRotationMatrix(origin.matrixWorld);
+			rayDirRef.current.applyQuaternion(originQ);
+		}
+
+		return true;
+	}, [gl, origin]);
+
+	useFrame((_state, _delta, xrFrame) => {
+		if (!isPresenting || !origin) {
+			if (landingDotRef.current) landingDotRef.current.visible = false;
+			if (holdRingGroupRef.current) holdRingGroupRef.current.visible = false;
+			return;
+		}
+
+		terrainCacheCounterRef.current++;
+		if (terrainCacheCounterRef.current % 60 === 0) {
+			collectTerrainChunks();
+		}
+
+		// Compute hand ray from hand joints or controller
+		const refSpace = gl.xr.getReferenceSpace();
+		handRayFoundRef.current = computeHandRay(xrFrame, refSpace);
+
+		if (!handRayFoundRef.current) {
+			// Fallback: no hand ray found, hide indicators
+			if (landingDotRef.current) landingDotRef.current.visible = false;
+			if (holdRingGroupRef.current) holdRingGroupRef.current.visible = false;
+			return;
+		}
+
+		// Get actual camera world Y for water detection
+		const xrCam = gl.xr.getCamera();
+		if (xrCam) {
+			xrCam.getWorldPosition(tempCamVec.current);
+						}
+
+		const waterLevel = props.waterLevel ?? -12;
+		const swimThreshold = waterLevel + 0.8;
+		isInWaterRef.current = tempCamVec.current.y <= swimThreshold;
+
+		if (isGrabbingRef.current) {
+			isHoveringRef.current = false;
+			if (landingDotRef.current) landingDotRef.current.visible = false;
+			if (holdRingGroupRef.current) holdRingGroupRef.current.visible = false;
+			return;
+		}
+
+		// Raycast for terrain hit using hand ray
+		let hit = findTerrainHit(rayOriginRef.current, rayDirRef.current);
+		if (!hit) {
+			hit = findGenericHit(rayOriginRef.current, rayDirRef.current);
+		}
+
+		// If no land hit found, try water plane (for entering water from land)
+		let isWaterEntry = false;
+		if (!hit) {
+			hit = findWaterHit(rayOriginRef.current, rayDirRef.current);
+			if (hit) isWaterEntry = true;
+		}
+
+		if (hit) {
+			hoverPointRef.current.copy(hit);
+			isHoveringRef.current = true;
+			isWaterTargetRef.current = isWaterEntry;
+			if (landingDotRef.current) {
+				landingDotRef.current.position.set(hit.x, hit.y + 0.05, hit.z);
+				landingDotRef.current.visible = true;
+			}
+		} else {
+			isHoveringRef.current = false;
+			if (landingDotRef.current) landingDotRef.current.visible = false;
+		}
+
+		// Hold-to-open menu logic
+		if (isSelectingRef.current && !menuOpenedRef.current) {
+			const elapsed = (performance.now() - selectStartTimeRef.current) / 1000;
+			holdProgressRef.current = Math.min(elapsed / MENU_HOLD_DURATION, 1);
+
+			if (elapsed >= MENU_HINT_THRESHOLD && isHoveringRef.current) {
+				if (holdRingGroupRef.current) {
+					holdRingGroupRef.current.position.set(
+						hoverPointRef.current.x,
+						hoverPointRef.current.y + 0.06,
+						hoverPointRef.current.z
+					);
+					holdRingGroupRef.current.visible = true;
+				}
+				if (holdRingMeshRef.current) {
+					const thetaLength = holdProgressRef.current * Math.PI * 2;
+					const oldGeom = holdRingMeshRef.current.geometry;
+					holdRingMeshRef.current.geometry = new RingGeometry(0.4, 0.5, 32, 1, -Math.PI / 2, thetaLength);
+					if (oldGeom) oldGeom.dispose();
 				}
 			}
+
+			if (elapsed >= MENU_HOLD_DURATION) {
+				menuOpenedRef.current = true;
+				isSelectingRef.current = false;
+				holdProgressRef.current = 0;
+				if (holdRingGroupRef.current) holdRingGroupRef.current.visible = false;
+
+				const xrCam = gl.xr.getCamera();
+				xrCam.getWorldPosition(tempCamVec.current);
+
+				let menuWorldPos: number[];
+				if (isHoveringRef.current) {
+					const hp = hoverPointRef.current;
+					const dx = hp.x - tempCamVec.current.x;
+					const dy = hp.y - tempCamVec.current.y;
+					const dz = hp.z - tempCamVec.current.z;
+					const dist = Math.sqrt(dx * dx + dy * dy + dz * dz);
+					const MAX_MENU_DIST = 3.5;
+					if (dist > MAX_MENU_DIST) {
+						const scale = MAX_MENU_DIST / dist;
+						menuWorldPos = [
+							tempCamVec.current.x + dx * scale,
+							tempCamVec.current.y + dy * scale,
+							tempCamVec.current.z + dz * scale
+						];
+					} else {
+						menuWorldPos = [hp.x, hp.y + 0.5, hp.z];
+					}
+				} else {
+					const camFwd = menuFwdRef.current.set(0, 0, -1).applyQuaternion(xrCam.quaternion);
+					if (origin) {
+						const originQ = new Quaternion().setFromRotationMatrix(origin.matrixWorld);
+						camFwd.applyQuaternion(originQ);
+					}
+					camFwd.y = 0;
+					camFwd.normalize();
+					menuWorldPos = [
+						tempCamVec.current.x + camFwd.x * 1.8,
+						tempCamVec.current.y - 0.2,
+						tempCamVec.current.z + camFwd.z * 1.8
+					];
+				}
+
+				window.dispatchEvent(new CustomEvent('xrMenuOpen', {
+					detail: {
+						position: menuWorldPos,
+						cameraPosition: [tempCamVec.current.x, tempCamVec.current.y, tempCamVec.current.z]
+					}
+				}));
+			}
+		} else {
+			if (holdRingGroupRef.current) holdRingGroupRef.current.visible = false;
 		}
 	});
 
-	const click = useCallback(() => {
-		console.log("clicking", player);
-		if (isHovered && !canInteract) {
-			targetLoc.current.position.set(
-				targetLoc.current.position.x,
-				targetLoc.current.position.y + (props.avatarHeightOffset.current ? (props.avatarHeightOffset.current - 0.8) : 0.4),
-				targetLoc.current.position.z
-			);
-			if (canTeleport) {
-				console.log("teleporting to", targetLoc.current.position);
+	useEffect(() => {
+		if (!isPresenting) return;
+		const xrSession = gl.xr.getSession();
+		if (!xrSession) return;
 
-				// Add the avatar height offset to the teleportation position
-				const teleportPosition = new Vector3().copy(targetLoc.current.position);
-				teleportPosition.y += props.avatarHeightOffset.current;
+		const handleSelectStart = () => {
+			if (isGrabbingRef.current) return;
 
-				player.position.copy(teleportPosition);
-				const p2pcf = window.p2pcf;
-				const participantObject = scene.getObjectByName("playerOne");
-				if (participantObject) {
-					console.log("participantObject", participantObject);
-					if (p2pcf) {
-						// var target = new Vector3();
-						// var worldPosition = participantObject.getWorldPosition(target);
-						const position = [
-							targetLoc.current.position.x,
-							targetLoc.current.position.y,
-							targetLoc.current.position.z,
-						];
-						const rotation = [
-							player.rotation.x,
-							player.rotation.y,
-							player.rotation.z,
-						];
-						const messageObject = {
-							[p2pcf.clientId]: {
-								position: position,
-								rotation: rotation,
-								profileImage: userData.profileImage,
-								vrm: userData.vrm,
-								inWorldName: userData.inWorldName,
-								isMoving: "walking",
-							},
-						};
-						console.log("sending message", messageObject);
-						clearTimeout(movementTimeoutRef.current);
-						movementTimeoutRef.current = setTimeout(() => {
-							const messageStopObject = {
-								[p2pcf.clientId]: {
-									isMoving: false,
-								},
-							};
-							const messageStop = JSON.stringify(messageStopObject);
-							p2pcf.broadcast(new TextEncoder().encode(messageStop));
-						}, 100);
-						const message = JSON.stringify(messageObject);
-						p2pcf.broadcast(new TextEncoder().encode(message)), p2pcf;
-					}
-				}
+			selectStartTimeRef.current = performance.now();
+			isSelectingRef.current = true;
+			menuOpenedRef.current = false;
+			holdProgressRef.current = 0;
+		};
+
+		const handleSelectEnd = () => {
+			const elapsed = (performance.now() - selectStartTimeRef.current) / 1000;
+			isSelectingRef.current = false;
+			holdProgressRef.current = 0;
+
+			if (holdRingGroupRef.current) holdRingGroupRef.current.visible = false;
+
+			if (menuOpenedRef.current) {
+				menuOpenedRef.current = false;
+				return;
 			}
-		}
-		if (isHovered && canInteract) {
-			if (controllers.length > 0) {
-				const rigidBodyDesc = new rapier.RigidBodyDesc(rapier.RigidBodyType.Fixed)
-					.setTranslation(
-						targetLoc.current.position.x,
-						targetLoc.current.position.y,
-						targetLoc.current.position.z - 0.008
-					)
-					.setLinvel(0, 0, 0)
-					.setGravityScale(1)
-					.setCanSleep(false)
-					.setCcdEnabled(true);
-				const rigidBody = world.createRigidBody(rigidBodyDesc);
-				const collider = world.createCollider(
-					rapier.ColliderDesc.cuboid(0.05, 0.05, 0.05),
-					rigidBody
-				);
-				collider.setFriction(0.1);
-				collider.setRestitution(0);
-				setTimeout(() => {
-					world.removeCollider(collider, true);
-					world.removeRigidBody(rigidBody);
-				}, 200);
+
+			if (elapsed < MENU_HINT_THRESHOLD && isHoveringRef.current) {
+				executeTeleport(hoverPointRef.current.clone(), isWaterTargetRef.current);
 			}
-		}
-	}, [isHovered, canTeleport, canInteract]);
+		};
+
+		xrSession.addEventListener('selectstart', handleSelectStart);
+		xrSession.addEventListener('selectend', handleSelectEnd);
+		return () => {
+			xrSession.removeEventListener('selectstart', handleSelectStart);
+			xrSession.removeEventListener('selectend', handleSelectEnd);
+		};
+	}, [isPresenting, executeTeleport, gl.xr]);
 
 	return (
 		<>
-			{isHovered && canTeleport && (
-				<group ref={targetLoc}>
-					<Indicator />
+			<group ref={landingDotRef} visible={false} name="teleport-indicator">
+				<mesh rotation={[-Math.PI / 2, 0, 0]}>
+					<ringGeometry args={[0.25, 0.35, 32]} />
+					<meshBasicMaterial
+						color="#4285f4"
+						transparent
+						opacity={0.8}
+						side={DoubleSide}
+						depthWrite={false}
+					/>
+				</mesh>
+				<mesh rotation={[-Math.PI / 2, 0, 0]}>
+					<circleGeometry args={[0.12, 16]} />
+					<meshBasicMaterial
+						color="#ffffff"
+						transparent
+						opacity={0.9}
+						side={DoubleSide}
+						depthWrite={false}
+					/>
+				</mesh>
 				</group>
-			)}
-			{isHovered && canInteract && (
-				<group ref={targetLoc}>
-					<ClickIndicator />
-				</group>
-			)}
-			<Menu />
-			<Interactive
-				onSelect={() => {
 
-					click();
-				}}
-				onHover={() => {
-					setIsHovered(true);
-				}}
-				onBlur={() => {
-					setIsHovered(false);
-					setCanTeleport(true);
-					setCanInteract(false);
-				}}
-			>
-				<group ref={target}>{props.children}</group>
-			</Interactive>
+			<group ref={holdRingGroupRef} visible={false} name="hold-ring">
+				<mesh ref={holdRingMeshRef} rotation={[-Math.PI / 2, 0, 0]}>
+					<ringGeometry args={[0.4, 0.5, 32, 1, -Math.PI / 2, 0]} />
+					<meshBasicMaterial
+						color="#22c55e"
+						transparent
+						opacity={0.9}
+						side={DoubleSide}
+						depthWrite={false}
+					/>
+				</mesh>
+			</group>
 		</>
 	);
 }

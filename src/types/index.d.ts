@@ -11,6 +11,7 @@ export interface XRPublisherOptions {
 	hmdIcon?: string;
 	xrButtonStyle?: React.CSSProperties;
 	hmdIconStyle?: React.CSSProperties;
+	containedMode?: boolean;
   }
   
   export interface ComponentAttributes {

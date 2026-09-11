@@ -6,7 +6,7 @@ declare class P2PCF implements P2PCFInstance {
   roomId: string;
   sessionId: string;
   peers: Map<string, P2PCFPeer>;
-  on(event: string, callback: Function): void;
+  on(event: string, callback: (...args: any[]) => void): void;
 }
 
 export default P2PCF;

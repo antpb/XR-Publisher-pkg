@@ -24,19 +24,14 @@
 	  "typeRoots": ["./node_modules/@types", "./src/types", "./src/components", "./src/components/p2pcf"],
 	  "types": ["node", "react", "react-dom", "three"],
 	  "paths": {
-		"@/*": ["src/*"]
+		"@/*": ["src/*"],
+		"ecctrl": ["src/types/ecctrl.d.ts"]
 	  }
 	},
 	"include": [
 	  "src/**/*.tsx",
 	  "src/**/*.ts",
 	  "src/**/*.jsx",
-	  "src/**/*.js",
-	  "src/**/**/*.tsx",
-	  "src/**/**/*.ts",
-	  "src/**/**/*.jsx",
-	  "src/**/**/*.js",
-	  "src/types/three-object.ts",
-	  "src/components/core/front/Portal.d.ts" // Ensure this path is included
-, "src/components/core/front/ThreeSky.tsx"	]
+	  "src/**/*.js"
+	]
   }

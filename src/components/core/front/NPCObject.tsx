@@ -1,17 +1,17 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useFrame, useLoader, useThree } from "@react-three/fiber";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader";
 import { FBXLoader } from "three/examples/jsm/loaders/FBXLoader";
-import EasyStar from "easystarjs";
-import { Mesh, PlaneGeometry, MeshBasicMaterial } from 'three';
 
-import { useNPCPathfinding } from "./NPCPathfinding";
+import { useNavcatPathfinding } from "./useNavcatPathfinding";
+import NPCInteractionBanner from "../../NPCInteractionBanner";
+import useInteractionStore from "../../../stores/interactionStore";
+import useNpcMessageStore from "../../../stores/npcMessageStore";
 
 
 // import { DRACOLoader } from "three/examples/jsm/loaders/DRACOLoader";
 import {
 	Color,
-	AudioListener,
 	Quaternion,
 	VectorKeyframeTrack,
 	QuaternionKeyframeTrack,
@@ -20,20 +20,26 @@ import {
 	AnimationMixer,
 	Vector3,
 	LoopRepeat,
-	DoubleSide,
 	Group,
 	Object3D
 } from "three";
-import { useAnimations, Text } from "@react-three/drei";
-import { GLTFAudioEmitterExtension } from "three-omi";
+import { useAnimations } from "@react-three/drei";
+import { CanvasTextMesh } from "./CanvasTextMesh";
 // import { GLTFGoogleTiltBrushMaterialExtension } from "three-icosa";
 import {
 	VRMUtils,
-	VRMLoaderPlugin,
 	VRMHumanBoneName,
 	VRM,
 } from "@pixiv/three-vrm";
-// import idle from "../../../defaults/avatars/friendly.fbx";
+import { createVRMLoaderPlugin } from "../../../utils/vrmLoader";
+// Seeded animation clips — resolve to '/assets/defaults/avatars/*.fbx' URL
+// strings at build time (same mechanism as Participants.tsx).
+import blankVRM from "../../../defaults/avatars/blank_avatar.vrm";
+import idleFbx from "../../../defaults/avatars/friendly.fbx";
+import walkingFbx from "../../../defaults/avatars/walking.fbx";
+import runningFbx from "../../../defaults/avatars/Running.fbx";
+import jumpFbx from "../../../defaults/avatars/Jump.fbx";
+import fallingFbx from "../../../defaults/avatars/falling.fbx";
 import { getMixamoRig } from "../../../utils/rigMap";
 import type { NPCProps } from "./NPCObject.d";
   
@@ -51,7 +57,8 @@ const mixamoVRMRigMap: { [key: string]: string } = getMixamoRig();
  * @param {VRM} vrm A target VRM
  * @returns {Promise<AnimationClip>} The converted AnimationClip
  */
-function loadMixamoAnimation(url: string, vrm: VRM) {
+function loadMixamoAnimation(url: string | string[], vrm: VRM) {
+	if (!url) return Promise.reject('Invalid URL');
 	let loader;
 	if (Array.isArray(url)) {
 		url.forEach((item) => {
@@ -61,18 +68,23 @@ function loadMixamoAnimation(url: string, vrm: VRM) {
 				loader = new GLTFLoader();
 			}
 		});
-	} else {
+	} else if (typeof url === 'string') {
 		if (url.endsWith(".fbx")) {
 			loader = new FBXLoader();
 		} else {
 			loader = new GLTFLoader();
 		}
 	}
-	return loader.loadAsync(url).then((asset) => {
+	// Loaders take a single URL string. For the array form, load the entry
+	// whose extension chose the loader above (the loop leaves the LAST
+	// item's loader in place) — passing the whole array to loadAsync was a
+	// latent runtime error, not just a type one.
+	const resolvedUrl = Array.isArray(url) ? url[url.length - 1] : url;
+	return loader.loadAsync(resolvedUrl).then((asset) => {
 		const clip = asset.animations[0];
 
 		// if asset is glb extract the scene
-		if (url.endsWith(".glb")) {
+		if (typeof url === 'string' && url.endsWith(".glb")) {
 			if ("scene" in asset) {
 				asset = asset.scene;
 			}
@@ -176,31 +188,43 @@ function loadMixamoAnimation(url: string, vrm: VRM) {
  *
  * @return {JSX.Element} The model object.
  */
-export function NPCObject(model: NPCProps): JSX.Element {
-	const easystar = useRef(new EasyStar.js());
-	const currentPath = useRef(null);
-	const currentPathIndex = useRef(0);
-	const targetPosition = useRef(new Vector3());
-	const isMoving = useRef(false);
-	const currentRotation = useRef(0);
-	const isChangingDirection = useRef(false);
-	const pathGenerationCooldown = useRef(false);
-	const navMeshInitialized = useRef(false);
+export function NPCObject(model: NPCProps): React.JSX.Element {
+	const { scene, camera } = useThree();
+	const groupRef = useRef<Group>(null);
+	const npcId = (model as any).id || 'npc-1';
+	// scalex/y/z were parsed off the block but never applied — the block
+	// parser used to hardcode 1 and this group never read the props at all.
+	// A missing/0 scale must fall back to 1 (an absent attribute parses as
+	// NaN upstream, and a 0 scale would collapse the avatar to nothing).
+	const npcScale = useMemo<[number, number, number]>(() => {
+		const axis = (v: number | undefined) =>
+			(typeof v === 'number' && Number.isFinite(v) && v !== 0) ? v : 1;
+		return [axis(model.scaleX), axis(model.scaleY), axis(model.scaleZ)];
+	}, [model.scaleX, model.scaleY, model.scaleZ]);
+	// Narrow boolean selector — this NPC re-renders only when ITS interaction
+	// state flips. The old whole-store destructure re-rendered every NPC on
+	// every store write, and an NPC render used to be expensive (see the
+	// mixer/VRM-setup memos below).
+	const isCurrentlyInteracting = useInteractionStore(
+		(s: any) => s.isInteracting && s.interactingWith?.id === npcId
+	);
+	// Pathfinding state is now managed by useNavcatPathfinding hook
 
 
-	// Add these constants
+	// Pathfinding constants
 	const turnSpeed = 5; // Adjust this value to change rotation speed (lower = smoother)
-	const directionChangeThreshold = 0.5; // Threshold angle in radians for considering a direction change
+	
+	// Body turn toward player when head yaw exceeds threshold
+	const BODY_TURN_THRESHOLD_RAD = Math.PI * 0.35; // ~63deg
+	const BODY_TURN_SMOOTH = 6.0; // larger = snappier
 
-	const [gridSize] = useState(20);
-	const [cellSize] = useState(1);
 	const [walkSpeed] = useState(1.1);
 	const [animationFiles] = useState({
-		idle: "https://builds.sxp.digital/avatars/friendly.fbx",
-		walking: "https://builds.sxp.digital/avatars/walking.fbx",
-		running: "https://builds.sxp.digital/avatars/Running.fbx",
-		jump: "https://builds.sxp.digital/avatars/Jump.fbx",
-		falling: "https://builds.sxp.digital/avatars/falling.fbx",
+		idle: idleFbx,
+		walking: walkingFbx,
+		running: runningFbx,
+		jump: jumpFbx,
+		falling: fallingFbx,
 	});
 
 	const animationsRef = useRef({
@@ -210,11 +234,23 @@ export function NPCObject(model: NPCProps): JSX.Element {
 		jump: null,
 		falling: null,
 	});
-	const [activeMessage, setActiveMessage] = useState([]);
+	// Last chat line, straight from the message store. Previously the full
+	// transcript was threaded through EnvironmentFront state as a prop —
+	// every chat message re-rendered the whole world tree to update one label.
+	const activeMessage = useNpcMessageStore((s) =>
+		s.messages.length > 0 ? s.messages[s.messages.length - 1].text : ''
+	);
 	const headPositionY = useRef<number>(0);
-	const [url, set] = useState(model.url);
+	// An empty avatar URL must NEVER reach useLoader: GLTFLoader('') fetches
+	// the page's own URL, gets HTML back, and throws "Unexpected token '<'"
+	// through suspense — blacking out the whole canvas (hit when the in-world
+	// editor added an npc block before a model was picked). Fall back to the
+	// seeded blank avatar instead.
+	const resolveUrl = (u: string | undefined | null) =>
+		(typeof u === 'string' && u.trim() !== '') ? u : blankVRM;
+	const [url, set] = useState(() => resolveUrl(model.url));
 	useEffect(() => {
-		setTimeout(() => set(model.url), 2000);
+		setTimeout(() => set(resolveUrl(model.url)), 2000);
 	}, []);
 
 	// useEffect(() => {
@@ -239,97 +275,92 @@ export function NPCObject(model: NPCProps): JSX.Element {
 	// 	// create variable that converts activeMessage to json
 	// }, [activeMessage]);
 
-	const { scene, clock } = useThree();
-
-	  
-
-	// create plane and assign as navmesh
-	// Inside NPCObject component
-	const navMesh = useRef<Mesh | null>(null);
-	const navMeshCreated = useRef(false);
-	const initialPosition = new Vector3(model.positionX, model.positionY, model.positionZ);
-	const { updateMovement, pathfindingState, generateRandomPath } = useNPCPathfinding(
+		// Start at origin - will be repositioned by spawn event
+		const initialPosition = new Vector3(0, 0, 0);
+	const gltf = useLoader(GLTFLoader, url, (loader) => {
+		loader.register((parser) => createVRMLoaderPlugin(parser));
+	});
+	const { updateMovement, pathfindingState, isInitialized, setInteractionState } = useNavcatPathfinding(
 		scene,
-		navMesh.current,
 		initialPosition,
-		walkSpeed,
-		turnSpeed
+		groupRef,
+		{
+			walkSpeed,
+			turnSpeed,
+			// 0.4/0.25 (was 0.15/0.15) — heightfield column count scales
+			// inversely with cellSize², and an ambient wandering NPC doesn't
+			// need fine precision. Together with the 140u navmesh radius this
+			// keeps each worker rebuild to ~half a million columns instead of
+			// multiple millions (memory spikes + fan noise while roaming).
+			cellSize: 0.4,
+			cellHeight: 0.25,
+			walkableSlopeAngle: 45,
+			walkableHeight: 1.0,
+			walkableRadius: 0.2,
+			walkableClimb: 0.5,
+			maxSimplificationError: 1.3,
+			maxEdgeLength: 12,
+			maxVerticesPerPoly: 5
+		}
 	);
+
+	// Handle interaction state changes
+	useEffect(() => {
+		if (isCurrentlyInteracting) {
+			// Stop pathfinding when interacting
+			pathfindingState.isMoving = false;
+			pathfindingState.currentPath = [];
+			setInteractionState(true);
+		} else {
+			// Resume pathfinding when not interacting
+			setInteractionState(false);
+			// Reset rotation to face forward when resuming pathfinding
+			if (groupRef.current) {
+				groupRef.current.rotation.y = 0; // Reset to forward-facing
+			}
+			// Also reset the pathfinding hook's rotation state
+			pathfindingState.currentRotation = 0;
+		}
+	}, [isCurrentlyInteracting]);
+
+	// Handle interaction start
+	const handleInteractionStart = () => {
+
+		// Stop pathfinding and make NPC face the player
+		pathfindingState.isMoving = false;
+		pathfindingState.currentPath = [];
+		setInteractionState(true);
+		
+		// Make NPC face the player
+		if (groupRef.current && camera) {
+			const npcPosition = groupRef.current.position;
+			const playerPosition = camera.position;
+			
+			// Calculate direction from NPC to player
+			const direction = new Vector3()
+				.subVectors(playerPosition, npcPosition)
+				.normalize();
+			
+			// Calculate rotation to face player (only Y rotation)
+			const yRotation = Math.atan2(direction.x, direction.z);
+			
+			// Apply rotation to make NPC face player
+			groupRef.current.rotation.y = yRotation;
+		}
+	};
 
 
 	// vrm helpers
 	// const helperRoot = new Group();
 	// helperRoot.renderOrder = 10000;
 	// scene.add(helperRoot);
-	useEffect(() => {
-		if (navMesh.current && navMeshInitialized.current) {
-			console.log("NavMesh ready, generating initial path");
-			generateRandomPath();
-		}
-	}, [navMesh.current, navMeshInitialized.current]);
-
-	const gltf = useLoader(GLTFLoader, url, (loader) => {
-		// const dracoLoader = new DRACOLoader();
-		// dracoLoader.setDecoderPath( model.threeObjectPluginRoot + "/inc/utils/draco/");
-		// dracoLoader.setDecoderConfig({type: 'js'});
-		// loader.setDRACOLoader(dracoLoader);
-
-		// if (openbrushEnabled === true) {
-		// 	loader.register(
-		// 		(parser) =>
-		// 			new GLTFGoogleTiltBrushMaterialExtension(
-		// 				parser,
-		// 				openbrushDirectory
-		// 			)
-		// 	);
-		// }
-		loader.register((parser) => {
-			return new VRMLoaderPlugin(parser);
-		});
-	});
-
-	useEffect(() => {
-		if (!scene || navMeshCreated.current) return;
-
-		const handleSceneLoaded = () => {
-			console.log("Searching for navmesh...");
-			const navMeshFound = window.scene.getObjectByName("npcNavMesh");
-			console.log("Found navmesh:", navMeshFound);
-
-			if (navMeshFound instanceof Mesh) {
-				// Ensure vertices are at y=0 for pathfinding
-				const positions = navMeshFound.geometry.attributes.position.array;
-				for (let i = 1; i < positions.length; i += 3) {
-					positions[i] = 0;
-				}
-				navMeshFound.geometry.computeVertexNormals();
-
-				navMesh.current = navMeshFound;
-				navMeshCreated.current = true;
-			}
-		};
-
-		window.addEventListener('mainSceneLoaded', handleSceneLoaded);
-
-		return () => {
-			window.removeEventListener('mainSceneLoaded', handleSceneLoaded);
-			navMesh.current = null;
-			navMeshCreated.current = false;
-		};
-	}, [scene]);
+	// Navmesh initialization is now handled by useNavcatPathfinding hook
 
 	// const audioObject = gltf.scene.getObjectByProperty('type', 'Audio');
 
 	const { actions } = useAnimations(gltf.animations, gltf.scene);
 	// const animationClips = gltf.animations;
 	const animationList = model.animations ? model.animations.split(",") : "";
-
-	useEffect(() => {
-		// console.log("allmessages", model)
-
-		setActiveMessage([model.messages[model.messages.length - 1]]);
-		// console.log("activemessage", activeMessage)
-	}, [model.messages]);
 
 	useEffect(() => {
 		if (animationList) {
@@ -345,41 +376,89 @@ export function NPCObject(model: NPCProps): JSX.Element {
 
 	if (gltf?.userData?.gltfExtensions?.VRM) {
 		const vrm = gltf.userData.vrm;
-		VRMUtils.rotateVRM0(vrm);
-		// Disable frustum culling
-		vrm.scene.traverse((obj: Object3D) => {
-			obj.frustumCulled = false;
-		});
-		vrm.scene.name = "assistant";
+		// One-time VRM setup + mixer creation, memoized on the loaded VRM.
+		// These ran on EVERY render before — and a fresh AnimationMixer per
+		// render re-triggered the animation-loading effect below (re-fetch +
+		// retarget of the Mixamo FBX clips, VRM hidden while loading). That
+		// was the visible glitch whenever interaction/chat state changed.
+		const currentVrm = useMemo(() => {
+			VRMUtils.rotateVRM0(vrm);
+			// Disable frustum culling
+			vrm.scene.traverse((obj: Object3D) => {
+				obj.frustumCulled = false;
+			});
+			vrm.scene.name = "assistant";
+			return vrm;
+		}, [vrm]);
+		const currentMixer = useMemo(
+			() => new AnimationMixer(currentVrm.scene),
+			[currentVrm]
+		);
 
-		// scene.add(vrm.scene);
+		// Head look-at target (player object preferred, fallback to camera)
+		const playerTargetRef = useRef<Object3D | null>(null);
+		
+		useEffect(() => {
+			const playerObj = scene.getObjectByName('playerOne');
+			playerTargetRef.current = (playerObj as Object3D) || camera;
+			
+			// Only enable look-at when interacting
+			if (isCurrentlyInteracting) {
+				currentVrm.lookAt.target = playerTargetRef.current as any;
+				currentVrm.lookAt.autoUpdate = true;
+			} else {
+				currentVrm.lookAt.autoUpdate = false;
+				currentVrm.lookAt.target = null;
+			}
+		}, [scene, camera, currentVrm, isCurrentlyInteracting]);
 
-		const currentVrm = vrm;
-		const currentMixer = new AnimationMixer(currentVrm.scene);
+		// Reposition NPC to a random navmesh point when available
+		useEffect(() => {
+			const onNpcSpawnSuggested = (e: any) => {
+				try {
+					const { x, y, z } = e.detail || {};
+					if (typeof x === 'number' && typeof y === 'number' && typeof z === 'number') {
+						// Update React group position to navmesh coordinates
+						if (groupRef.current) {
+							groupRef.current.position.set(x, y, z);
+							
+							// Update pathfinding state with the new position
+							// Dispatch a custom event to update the pathfinding state
+							window.dispatchEvent(new CustomEvent('npcPositionUpdated', { 
+								detail: { x, y, z } 
+							}));
+						}
+					}
+				} catch (e) {
+					console.error('Error in NPC spawn handler:', e);
+				}
+			};
+			window.addEventListener('npcSpawnSuggested', onNpcSpawnSuggested);
+			return () => {
+				window.removeEventListener('npcSpawnSuggested', onNpcSpawnSuggested);
+			};
+		}, [currentVrm]);
 
 		useEffect(() => {
 			// if (currentVrm) {
 			// 	setHeadPositionY(currentVrm.humanoid.getRawBoneNode(VRMHumanBoneName.Head).position.y);
 			// }
 			if (currentVrm) {
-				let head = currentVrm.humanoid.getRawBoneNode(VRMHumanBoneName.Head);
-				let worldPos = new Vector3();
+				const head = currentVrm.humanoid.getRawBoneNode(VRMHumanBoneName.Head);
+				const worldPos = new Vector3();
 				head.getWorldPosition(worldPos);
 				// setHeadPositionY(worldPos.y);
 				headPositionY.current = worldPos.y;
 			}
 		}, [currentVrm]);
 
-		// First, add a state to track if we're turning
-		const isChangingDirection = useRef(false);
-		const pathGenerationCooldown = useRef(false);
+		// Pathfinding state is now managed by useNavcatPathfinding hook
 
 		let lastUpdateTime = 0;
 		useEffect(() => {
 			if (currentVrm && currentMixer && animationFiles) {
 				const loadAnimations = async () => {
 					try {
-						console.log("Loading animations...");
 						currentVrm.scene.visible = false;
 
 						// Load idle animation
@@ -406,7 +485,6 @@ export function NPCObject(model: NPCProps): JSX.Element {
 						walkingAction.setEffectiveWeight(0);
 
 						// Start both animations
-						console.log("Playing initial animations");
 						idleAction.play();
 						walkingAction.play();
 
@@ -421,35 +499,7 @@ export function NPCObject(model: NPCProps): JSX.Element {
 		}, [currentVrm, currentMixer, animationFiles]);
 
 
-		// Update the handleAnimation function signature to accept delta
-		const handleAnimation = (isWalking: boolean, delta: number) => {
-			if (!animationsRef.current) return;
-
-			const { idle, walking } = animationsRef.current;
-			if (!idle || !walking) return;
-
-			const crossFadeDuration = isChangingDirection.current ? 0.4 : 0.2;
-
-			if (isWalking) {
-				idle.enabled = true;
-				walking.enabled = true;
-
-				if (walking.getEffectiveWeight() < 1) {
-					walking.setEffectiveTimeScale(isChangingDirection.current ? 0.7 : 0.95);
-					walking.setEffectiveWeight(walking.getEffectiveWeight() + delta * 2);
-					idle.setEffectiveWeight(1 - walking.getEffectiveWeight());
-				}
-			} else {
-				idle.enabled = true;
-				walking.enabled = true;
-
-				if (idle.getEffectiveWeight() < 1) {
-					idle.setEffectiveTimeScale(1);
-					idle.setEffectiveWeight(idle.getEffectiveWeight() + delta * 2);
-					walking.setEffectiveWeight(1 - idle.getEffectiveWeight());
-				}
-			}
-		};
+		// Animation handling is now managed by useNavcatPathfinding hook
 
 
 
@@ -461,38 +511,55 @@ export function NPCObject(model: NPCProps): JSX.Element {
 			if (currentVrm && currentMixer) {
 				if (timeSinceLastUpdate >= 1.0) {  // Log every second
 					lastUpdateTime = currentTime;
-					// console.log("Movement state:", {
-					// 	isMoving: pathfindingState.current.isMoving,
-					// 	currentPath: pathfindingState.current.currentPath,
-					// 	currentTargetIndex: pathfindingState.current.currentTargetIndex,
-					// 	position: currentVrm.scene.position,
-					// });
 				}
 
 				// Update text position
 				if (timeSinceLastUpdate >= 0.1) {
 					lastUpdateTime = currentTime;
-					const npcText = scene.getObjectByName("npcText");
-					const npcBackground = scene.getObjectByName("npcBackground");
+					// Search the NPC's own subtree, NOT the scene — both objects
+					// are children of this group, and scene.getObjectByName is a
+					// full traversal of thousands of objects with streamed terrain.
+					const npcText = groupRef.current?.getObjectByName("npcText");
+					const npcBackground = groupRef.current?.getObjectByName("npcBackground");
 					if (npcText && npcBackground) {
-						let head = currentVrm.humanoid.getRawBoneNode(VRMHumanBoneName.Head);
-						let worldPos = new Vector3();
+						const head = currentVrm.humanoid.getRawBoneNode(VRMHumanBoneName.Head);
+						const worldPos = new Vector3();
 						head.getWorldPosition(worldPos);
 						npcText.position.y = worldPos.y - 0.4;
 						npcBackground.position.y = worldPos.y - 0.4;
 					}
 				}
 
-				// Update movement and animations
-				updateMovement(
-					delta,
-					currentVrm.scene,
-					currentMixer,
-					{
-						idle: animationsRef.current.idle,
-						walking: animationsRef.current.walking
+				// Head look-at via VRM.lookAt is handled by setting target; add whole-body yaw when needed
+				// Only do body rotation when interacting
+				if (isCurrentlyInteracting && groupRef.current && playerTargetRef.current) {
+					const npcPos = groupRef.current.getWorldPosition(new Vector3());
+					const targetPos = playerTargetRef.current.getWorldPosition(new Vector3());
+					const toPlayer = new Vector3().subVectors(targetPos, npcPos);
+					toPlayer.y = 0; // yaw only
+					if (toPlayer.lengthSq() > 1e-4) {
+						const desiredYaw = Math.atan2(toPlayer.x, toPlayer.z);
+						const currentYaw = groupRef.current.rotation.y;
+						let deltaYaw = desiredYaw - currentYaw;
+						// wrap to [-pi, pi]
+						deltaYaw = Math.atan2(Math.sin(deltaYaw), Math.cos(deltaYaw));
+						if (Math.abs(deltaYaw) > BODY_TURN_THRESHOLD_RAD) {
+							groupRef.current.rotation.y = currentYaw + deltaYaw * Math.min(1, BODY_TURN_SMOOTH * delta);
+						}
 					}
-				);
+				}
+
+				// Update movement and animations
+				if (isInitialized) {
+					updateMovement(
+						delta,
+						currentVrm.scene,
+						{
+							idle: animationsRef.current.idle,
+							walking: animationsRef.current.walking
+						}
+					);
+				}
 
 				// Update VRM and mixer
 				currentVrm.update(delta);
@@ -511,40 +578,59 @@ export function NPCObject(model: NPCProps): JSX.Element {
 			// Extract the Output parameter
 			// console.log("that obj", outputJSON);
 		}
-		let defaultColor = "0xffffff";
-		let black = "0x000000";
-		var colorValue = new Color(parseInt(defaultColor.replace("#", "0x"), 16));
-		var blackValue = new Color(parseInt(black.replace("#", "0x"), 16));
+		const defaultColor = "0xffffff";
+		const black = "0x000000";
+		const blackValue = new Color(parseInt(black.replace("#", "0x"), 16));
 
 		return (
-			<group
-				userData={{ camExcludeCollision: true }}
-				position={[model.positionX, model.positionY, model.positionZ]}
-				rotation={[model.rotationX, model.rotationY, model.rotationZ]}
-			>
-				<Text
-					position={[0.6, 0.5, 0]}
-					fontSize={0.1}
-					scale={[0.5, 0.5, 0.5]}
-					// rotation-y={-Math.PI / 2}
-
-					maxWidth={1}
-					color={colorValue}
-					name="npcText"
+			<>
+				<group
+					ref={groupRef}
+					name={`NPC-${(model as any).id || 'npc-1'}`}
+					userData={{ 
+						camExcludeCollision: true,
+						npcId: (model as any).id || 'npc-1',
+						npcName: (model as any).name || 'NPC'
+					}}
+					rotation={[model.rotationX, model.rotationY, model.rotationZ]}
+					scale={npcScale}
 				>
-					{outputJSON && String(outputJSON)}
-				</Text>
-				<mesh name="npcBackground" position={[0.6, 0.5, -0.01]}>
-					<planeGeometry attach="geometry" args={[0.65, 1.5]} />
-					<meshBasicMaterial
-						attach="material"
-						color={blackValue}
-						opacity={0.5}
-						transparent={true}
+					{/*
+					  * NPC dialogue label — renderer-agnostic CanvasTextMesh so it
+					  * renders on WebGL (mobile) as well as WebGPU. ~0.05 world
+					  * units tall, 0.5 wrap width (matches the prior footprint).
+					  */}
+					<CanvasTextMesh
+						text={outputJSON ? String(outputJSON) : ''}
+						position={[0.6, 0.5, 0]}
+						worldWidth={0.5}
+						worldFontSize={0.05}
+						color={defaultColor}
+						anchorX="center"
+						anchorY="middle"
+						align="left"
 					/>
-				</mesh>
+					<mesh name="npcBackground" position={[0.6, 0.5, -0.01]}>
+						<planeGeometry attach="geometry" args={[0.65, 1.5]} />
+						<meshBasicMaterial
+							attach="material"
+							color={blackValue}
+							opacity={0.5}
+							transparent={true}
+						/>
+					</mesh>
 				<primitive object={vrm.scene} />
 			</group>
+			
+			{/* NPC Interaction Banner - outside group so it can rotate independently */}
+			<NPCInteractionBanner
+				npcId={(model as any).id || 'npc-1'}
+				npcName={(model as any).name || 'NPC'}
+				npcGroupRef={groupRef}
+				visible={!isCurrentlyInteracting}
+				onInteractionStart={handleInteractionStart}
+			/>
+			</>
 		);
 	}
 
@@ -590,33 +676,26 @@ export function NPCObject(model: NPCProps): JSX.Element {
 	// 	return circle;
 	// });
 
-	let outputJSON;
-	let testObject;
-	if (activeMessage && activeMessage?.length > 0) {
-		testObject = activeMessage;
-		const outputString = testObject;
-		outputJSON = outputString;
-		// outputJSON = outputString;
+	const blackHex = "0x000000";
+	const blackValue = new Color(parseInt(blackHex.replace("#", "0x"), 16));
 
-		// Extract the Output parameter
-		// console.log("that obj", outputJSON);
-	}
-	let defaultColor = "0xffffff";
-	let blackHex = "0x000000";
-	var colorValue = new Color(parseInt(defaultColor.replace("#", "0x"), 16));
-	var blackValue = new Color(parseInt(blackHex.replace("#", "0x"), 16));
-
-	const color = new Color(colorValue);
 	const black = new Color(blackValue);
 
 	return (
 		<>
 			<group
-				userData={{ camExcludeCollision: true }}
-				position={[model.positionX, model.positionY, model.positionZ]}
+				ref={groupRef}
+				name={`NPC-${(model as any).id || 'npc-1'}`}
+				userData={{ 
+					camExcludeCollision: true,
+					npcId: (model as any).id || 'npc-1',
+					npcName: (model as any).name || 'NPC'
+				}}
 				rotation={[model.rotationX, model.rotationY, model.rotationZ]}
+				scale={npcScale}
 			>
-				<Text
+				{/* Temporarily disabled Text component to avoid worker issues */}
+				{/* <Text
 					font={model.defaultFont}
 					position={[0.6, 0.9, 0]}
 					scale={[0.5, 0.5, 0.5]}
@@ -627,7 +706,7 @@ export function NPCObject(model: NPCProps): JSX.Element {
 				>
 					{outputJSON && String(outputJSON)}
 					{/* {outputJSON && ("Tone: " + String(outputJSON.tone))} */}
-				</Text>
+				{/* </Text> */}
 				<mesh position={[0.6, 0.9, -0.01]}>
 					<planeGeometry attach="geometry" args={[0.65, 1.5]} />
 					<meshBasicMaterial
@@ -637,8 +716,18 @@ export function NPCObject(model: NPCProps): JSX.Element {
 						transparent={true}
 					/>
 				</mesh>
-				<primitive object={gltf.scene} />
-			</group>
+			<primitive object={gltf.scene} />
+		</group>
+		
+		{/* NPC Interaction Banner - outside group so it can rotate independently */}
+		<NPCInteractionBanner
+			npcId={(model as any).id || 'npc-1'}
+			npcName={(model as any).name || 'NPC'}
+			npcGroupRef={groupRef}
+			visible={!isCurrentlyInteracting}
+			onInteractionStart={handleInteractionStart}
+		/>
 		</>
 	);
 }
+

@@ -1,0 +1,26 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "three-spawn-point-block",
+  "title": "Spawn Point Block",
+  "description": "Define the initial spawn location for players entering the world.",
+  "type": "object",
+  "properties": {
+    "positionx": {
+      "type": "number",
+      "default": 0,
+      "description": "X coordinate of spawn location"
+    },
+    "positiony": {
+      "type": "number",
+      "default": 0,
+      "description": "Y coordinate of spawn location. Treated as a minimum — the player is always placed on top of the terrain if the terrain at this X/Z is higher, so a too-low Y never spawns the player underground."
+    },
+    "positionz": {
+      "type": "number",
+      "default": 0,
+      "description": "Z coordinate of spawn location"
+    }
+  },
+  "additionalProperties": false
+}
+

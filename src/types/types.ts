@@ -1,4 +1,4 @@
-import { Props } from '@react-three/fiber';
+import { CanvasProps as R3FCanvasProps } from '@react-three/fiber';
 // import { ThreeObjectFrontProps } from './three-object-types';
 // import { MutableRefObject } from 'react';
 // import { OrbitControlsRef } from './three-object-types';
@@ -35,10 +35,19 @@ export interface XRPublisherSettings {
 export interface XRPublisherOptions {
 	threeObjectPlugin: string;
 	defaultAvatarAnimation: string;
+	defaultAvatar: string;
+	multiplayerWorker: string;
 	userData: UserData;
 	postSlug?: string;
 	hmdIcon?: string;
-}  
+	containedMode?: boolean;
+	/** Publishing-API origin (world registry, NPC/character endpoints,
+	 *  editor tokens, world state). When omitted, resolution falls back to
+	 *  `window.XRP_API_BASE` → localStorage `xr_publisher_edge_api_url` →
+	 *  same origin (published worlds are served by the API worker, so they
+	 *  need no configuration). */
+	apiBase?: string;
+}
 
 export interface ComponentScanResult {
 	networkingBlock: HTMLElement[];
@@ -50,7 +59,9 @@ export interface ComponentScanResult {
 	lightsToAdd: HTMLElement[];
 	textToAdd: HTMLElement[];
 	npcsToAdd: HTMLElement[];
+	rideablesToAdd: HTMLElement[];
 	sky: HTMLElement;
+	terrainToAdd: HTMLElement[];
 }
 
 export interface EnvironmentAttributes {
@@ -93,19 +104,26 @@ export interface EnvironmentFrontProps {
 	animations: string;
 	hdr: string;
 	camCollisions: boolean;
-	sky: string;
+	/** Scanner-collected <three-sky-block> elements (or '' when none). */
+	sky: string | HTMLElement[];
 	audiosToAdd: CustomElement[];
 	videosToAdd: CustomElement[];
 	imagesToAdd: CustomElement[];
 	lightsToAdd: CustomElement[];
 	textToAdd: CustomElement[];
 	npcsToAdd: CustomElement[];
+	rideablesToAdd: CustomElement[];
 	modelsToAdd: CustomElement[];
 	portalsToAdd: CustomElement[];
+	terrainToAdd: CustomElement[];
+	/** Plugin custom blocks (non-built-in three-*-block elements), captured
+	 *  unconditionally at scan time; types resolve lazily via the registry. */
+	customBlocksToAdd?: Array<{ tag: string; el: CustomElement; index: number }>;
 	threePreviewImage: string;
 	threeObjectPluginRoot: string;
 	postSlug: string;
 	defaultAvatarAnimation: string;
+	containedMode?: boolean;
   }  
 
 export interface ObjectProps {
@@ -167,7 +185,7 @@ export interface FloorProps {
 }
 
 
-export interface CanvasProps extends Props {
+export interface CanvasProps extends R3FCanvasProps {
 	shadowMap?: boolean;
 }
 

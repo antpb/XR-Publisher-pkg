@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "three-networking-block",
+  "title": "Networking Block",
+  "description": "Enable multiplayer functionality with voice chat and custom avatar support.",
+  "type": "object",
+  "properties": {
+    "signalingurl": {
+      "type": "string",
+      "default": "https://p2pcf.sxp.digital",
+      "description": "P2PCF signaling worker origin used to broker WebRTC connections"
+    },
+    "roomslug": {
+      "type": "string",
+      "default": "",
+      "description": "Room identifier; peers sharing a slug join the same session (defaults to a slug derived from the world)"
+    },
+    "participantlimit": {
+      "type": "number",
+      "default": 10,
+      "minimum": 2,
+      "description": "Maximum number of concurrent users allowed in the room"
+    },
+    "customavatars": {
+      "type": "string",
+      "enum": ["0", "1"],
+      "default": "0",
+      "description": "Allow (1) or disallow (0) custom avatar URLs from users"
+    },
+    "voicechatenabled": {
+      "type": "string",
+      "enum": ["0", "1"],
+      "default": "0",
+      "description": "Enable (1) or disable (0) voice chat functionality"
+    }
+  },
+  "additionalProperties": false
+}
+

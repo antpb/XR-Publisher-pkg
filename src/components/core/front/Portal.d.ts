@@ -11,8 +11,11 @@ export interface PortalProps extends ScalableProps {
     labelOffsetZ?: number;
     labelTextColor?: string;
     animations?: string;
-    threeObjectPluginRoot: string;
     defaultFont: string;
+    useTeleportDestination?: boolean;
+    teleportDestinationX?: number;
+    teleportDestinationY?: number;
+    teleportDestinationZ?: number;
 }
 
 declare const PortalObject: React.FC<PortalProps>;

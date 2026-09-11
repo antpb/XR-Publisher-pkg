@@ -1,0 +1,56 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "three-sky-block",
+  "title": "Sky Block",
+  "description": "Configure the skybox and atmospheric effects for the environment.",
+  "type": "object",
+  "properties": {
+    "skyurl": {
+      "type": "string",
+      "default": "",
+      "description": "Equirectangular sky texture URL. When set, the texture replaces the procedural atmosphere."
+    },
+    "distance": {
+      "type": "number",
+      "default": 170000,
+      "description": "Distance of the sky sphere"
+    },
+    "rayleigh": {
+      "type": "number",
+      "default": 1,
+      "description": "Rayleigh scattering coefficient for atmospheric haze"
+    },
+    "sunpositionx": {
+      "type": "number",
+      "default": 0,
+      "description": "X component of sun direction vector"
+    },
+    "sunpositiony": {
+      "type": "number",
+      "default": 1,
+      "description": "Y component of sun direction vector"
+    },
+    "sunpositionz": {
+      "type": "number",
+      "default": -10000,
+      "description": "Z component of sun direction vector"
+    },
+    "turbidity": {
+      "type": "number",
+      "default": 10,
+      "description": "NOT YET IMPLEMENTED — accepted but ignored by the runtime sky renderer. Atmospheric turbidity (haziness)"
+    },
+    "miedirectionalg": {
+      "type": "number",
+      "default": 0.7,
+      "description": "NOT YET IMPLEMENTED — accepted but ignored by the runtime sky renderer. Mie scattering directional coefficient"
+    },
+    "miecoefficient": {
+      "type": "number",
+      "default": 0.005,
+      "description": "NOT YET IMPLEMENTED — accepted but ignored by the runtime sky renderer. Mie scattering coefficient"
+    }
+  },
+  "additionalProperties": false
+}
+

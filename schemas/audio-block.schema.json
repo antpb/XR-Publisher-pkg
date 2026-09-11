@@ -1,0 +1,165 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "three-audio-block",
+  "title": "Audio Block",
+  "description": "Add spatial or ambient audio sources with proximity trigger support.",
+  "type": "object",
+  "required": [
+    "audiourl"
+  ],
+  "properties": {
+    "audiourl": {
+      "type": "string",
+      "description": "URL to the audio file (WAV, MP3, OGG formats)"
+    },
+    "positional": {
+      "type": "string",
+      "enum": [
+        "0",
+        "1"
+      ],
+      "default": "0",
+      "description": "Enable (1) positional/spatial audio or (0) ambient audio. Only the literal '1' enables it; anything else is ambient."
+    },
+    "loop": {
+      "type": "string",
+      "enum": [
+        "0",
+        "1"
+      ],
+      "default": "0",
+      "description": "Loop the audio (1) or play once (0)"
+    },
+    "volume": {
+      "type": "number",
+      "default": 1,
+      "minimum": 0,
+      "maximum": 1,
+      "description": "Audio volume (0.0 to 1.0)"
+    },
+    "autoplay": {
+      "type": "string",
+      "enum": [
+        "0",
+        "1"
+      ],
+      "default": "0",
+      "description": "Auto-play on load (1) or wait for trigger (0)"
+    },
+    "refdistance": {
+      "type": "number",
+      "default": 1,
+      "description": "Reference distance for volume falloff"
+    },
+    "maxdistance": {
+      "type": "number",
+      "default": 10000,
+      "description": "Maximum distance for audio playback"
+    },
+    "rollofffactor": {
+      "type": "number",
+      "default": 1,
+      "description": "Volume rolloff factor"
+    },
+    "coneinnerangle": {
+      "type": "number",
+      "default": 360,
+      "description": "Inner cone angle for directional audio (degrees)"
+    },
+    "coneouterangle": {
+      "type": "number",
+      "default": 0,
+      "description": "Outer cone angle for directional audio (degrees)"
+    },
+    "coneoutergain": {
+      "type": "number",
+      "default": 0,
+      "description": "Volume reduction outside the cone"
+    },
+    "distancemodel": {
+      "type": "string",
+      "enum": [
+        "linear",
+        "inverse",
+        "exponential"
+      ],
+      "default": "inverse",
+      "description": "Distance model for volume falloff calculation"
+    },
+    "triggerlocationx": {
+      "type": "number",
+      "default": 0,
+      "description": "Width of the proximity trigger zone (0 = disabled)"
+    },
+    "triggerlocationy": {
+      "type": "number",
+      "default": 0,
+      "description": "Height of the proximity trigger zone (0 = disabled)"
+    },
+    "triggerlocationz": {
+      "type": "number",
+      "default": 0,
+      "description": "Depth of the proximity trigger zone (0 = disabled)"
+    },
+    "triggerlocationposx": {
+      "type": "number",
+      "default": 0,
+      "description": "X offset of the trigger zone from audio position"
+    },
+    "triggerlocationposy": {
+      "type": "number",
+      "default": 0,
+      "description": "Y offset of the trigger zone from audio position"
+    },
+    "triggerlocationposz": {
+      "type": "number",
+      "default": 0,
+      "description": "Z offset of the trigger zone from audio position"
+    },
+    "positionx": {
+      "type": "number",
+      "default": 0,
+      "description": "X position in world space"
+    },
+    "positiony": {
+      "type": "number",
+      "default": 0,
+      "description": "Y position in world space"
+    },
+    "positionz": {
+      "type": "number",
+      "default": 0,
+      "description": "Z position in world space"
+    },
+    "rotationx": {
+      "type": "number",
+      "default": 0,
+      "description": "Rotation around X axis (in radians)"
+    },
+    "rotationy": {
+      "type": "number",
+      "default": 0,
+      "description": "Rotation around Y axis (in radians)"
+    },
+    "rotationz": {
+      "type": "number",
+      "default": 0,
+      "description": "Rotation around Z axis (in radians)"
+    },
+    "isspatial": {
+      "type": "string",
+      "enum": [
+        "0",
+        "1"
+      ],
+      "default": "0",
+      "description": "Play a spatial-audio FILE (ambisonic/object-based) described by spatialmetaurl, instead of a plain stereo source."
+    },
+    "spatialmetaurl": {
+      "type": "string",
+      "default": "",
+      "description": "URL of the spatial-audio metadata file used when isspatial is '1'."
+    }
+  },
+  "additionalProperties": false
+}
